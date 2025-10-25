@@ -1,0 +1,59 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "/usr/local/cuda-12.4/include",
+                "${workspaceFolder}/llvm-project/mlir/include",
+                "${workspaceFolder}/llvm-project/llvm/include",
+                "${workspaceFolder}/llvm-project/lld",
+                "${workspaceFolder}/llvm-project/lld/include",
+                "${workspaceFolder}/llvm-project/build/include",
+                "${workspaceFolder}/llvm-project/build/tools/mlir/include"
+            ],
+            "defines": [
+                "GOOGLE_CUDA",
+                "GET_OP_CLASSES",
+                "GEN_PASS_REGISTRATION"
+            ],
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "linux-gcc-x64",
+            "browse": {
+                "path": [
+                    "/usr/local/cuda-12.4/include",
+                    "${workspaceFolder}/llvm-project/mlir/include/**",
+                    "${workspaceFolder}/llvm-project/llvm/include",
+                    "${workspaceFolder}/llvm-project/lld",
+                    "${workspaceFolder}/llvm-project/lld/include",
+                    "${workspaceFolder}/llvm-project/build/include",
+                    "${workspaceFolder}/llvm-project/build/tools/mlir/include"
+                ],
+                "databaseFilename": "${workspaceFolder}/.vscode/vc.db",
+                "limitSymbolsToIncludedHeaders": false
+            }
+        }
+    ],
+    "version": 4
+}
+
+// "${workspaceFolder}/toy/Ch2/include",
+// "${workspaceFolder}/toy/bazel-toy/pass1/include",
+// "${workspaceFolder}/toy/bazel-toy/external/org_tensorflow",
+// "${workspaceFolder}/toy/bazel-toy/external/com_google_absl",
+// "${workspaceFolder}/toy/bazel-toy/external/eigen_archive",
+// "${workspaceFolder}/toy/bazel-toy/external/com_google_protobuf/src",
+// "${workspaceFolder}/toy/bazel-toy/bazel-out/k8-dbg/bin/external/org_tensorflow",
+// "${workspaceFolder}/bazel-external/org_tensorflow",
+// "${workspaceFolder}/llvm-project/llvm/include",
+// "${workspaceFolder}/llvm-project/mlir/include",
+// "${workspaceFolder}/llvm-project/build/include",
+// "${workspaceFolder}/llvm-project/build/tools/mlir/include",
+// "${workspaceFolder}/lower_toy_dialect",
+// "${workspaceFolder}/lower_toy_dialect/build",
+// "${workspaceFolder}/study_disc_passes/**",
+// "${workspaceFolder}/study_disc_passes/bazel-out/k8-dbg/bin/mlir/disc/transforms",
+// "${workspaceFolder}/study_disc_passes/bazel-out/k8-dbg/bin/external/org_tensorflow/tensorflow",
+// "${workspaceFolder}/study_disc_passes/bazel-out/k8-dbg/bin/external/org_tensorflow/tensorflow/compiler/xla/mlir_hlo/**",
+// "${workspaceFolder}/study_disc_passes/bazel-study_disc_passes/external/org_tensorflow/tensorflow/compiler/xla/mlir_hlo/**",

@@ -1,0 +1,3 @@
+def add_two_vectors(a: tensor, b: tensor, out: tensor, n: int) {
+  out = add(a, b, n);
+}

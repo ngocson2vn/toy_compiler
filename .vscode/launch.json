@@ -1,0 +1,385 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+        "name": "(gdb) Ch2",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/toy/bazel-bin/Ch2/toyc",
+        "cwd": "${workspaceFolder}/toy/Ch2",
+        "args": [
+            "./test/codegen.toy",
+            "-emit=mlir",
+            "-mlir-print-debuginfo",
+            "-debug"
+        ],
+        "stopAtEntry": true,
+        "environment": [
+            {
+                "name": "TF_CPP_MAX_VLOG_LEVEL",
+                "value": "0"
+            },
+            {
+                "name": "CUDA_VISIBLE_DEVICES",
+                "value": "0"
+            }
+            // {
+            //     "name": "LD_LIBRARY_PATH",
+            //     "value": "DUMMY"
+            // }
+        ],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "miDebuggerArgs": "-x '${workspaceFolder}/gdb.conf'",
+        "linux": {
+        "sourceFileMap": {
+            "/proc/self/cwd": {
+                "editorPath": "${workspaceFolder}/toy/bazel-toy",
+                "useForBreakpoints": true
+            }
+            }
+        },
+        "setupCommands": [
+            // {
+            //     "description": "Test",
+            //     "text": "python import sys;sys.path.insert(0, '/data00/home/son.nguyen/workspace/tools/python'); from libstdcxx.v6.printers import register_libstdcxx_printers; register_libstdcxx_printers(None)",
+            //     "ignoreFailures": false
+            // },
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            },
+            {
+                "description": "Set Disassembly Flavor to Intel",
+                "text": "-gdb-set disassembly-flavor intel",
+                "ignoreFailures": true
+            },
+            {
+                "description": "",
+                //Configure the search path of the code file here, such as the path where the workspace can be configured in the blade project
+                "text": "directory ${workspaceFolder}"
+            }
+        ]
+    },
+    {
+        "name": "(gdb) pass1",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/toy/bazel-bin/pass1/main",
+        "cwd": "${workspaceFolder}",
+        "args": [
+        "-print-nesting",
+        "toy/Ch2/test1.mlir"
+        ],
+        "stopAtEntry": true,
+        "environment": [
+            {
+                "name": "TF_CPP_MAX_VLOG_LEVEL",
+                "value": "0"
+            },
+            {
+                "name": "CUDA_VISIBLE_DEVICES",
+                "value": "0"
+            }
+            // {
+            //     "name": "LD_LIBRARY_PATH",
+            //     "value": "DUMMY"
+            // }
+        ],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "miDebuggerArgs": "-x '${workspaceFolder}/gdb.conf'",
+        "linux": {
+        "sourceFileMap": {
+            "/proc/self/cwd": {
+                "editorPath": "${workspaceFolder}/toy/bazel-toy",
+                "useForBreakpoints": true
+            }
+            }
+        },
+        "setupCommands": [
+            // {
+            //     "description": "Test",
+            //     "text": "python import sys;sys.path.insert(0, '/data00/home/son.nguyen/workspace/tools/python'); from libstdcxx.v6.printers import register_libstdcxx_printers; register_libstdcxx_printers(None)",
+            //     "ignoreFailures": false
+            // },
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            },
+            {
+                "description": "Set Disassembly Flavor to Intel",
+                "text": "-gdb-set disassembly-flavor intel",
+                "ignoreFailures": true
+            },
+            {
+                "description": "",
+                //Configure the search path of the code file here, such as the path where the workspace can be configured in the blade project
+                "text": "directory ${workspaceFolder}"
+            }
+        ]
+    },
+    {
+        "name": "(gdb) test",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/test/test",
+        "cwd": "${workspaceFolder}",
+        "args": [],
+        "stopAtEntry": true,
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "miDebuggerArgs": "-x '${workspaceFolder}/gdb.conf'",
+        "linux": {
+          "sourceFileMap": {
+              "/proc/self/cwd": {
+                  "editorPath": "${workspaceFolder}/test",
+                  "useForBreakpoints": true
+              }
+            }
+        },
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            },
+            {
+                "description": "Set Disassembly Flavor to Intel",
+                "text": "-gdb-set disassembly-flavor intel",
+                "ignoreFailures": true
+            },
+            {
+                "description": "",
+                //Configure the search path of the code file here, such as the path where the workspace can be configured in the blade project
+                "text": "directory ${workspaceFolder}"
+            }
+        ]
+    },
+    {
+        "name": "lower_gpu_ops",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/examples/bazel-bin/lower_gpu_ops/lower_gpu_ops",
+        "cwd": "${workspaceFolder}/examples",
+        "args": [
+            "lower_gpu_ops/input.mlir",
+            "--debug"
+        ],
+        "stopAtEntry": false,
+        "environment": [
+            {
+                "name": "TF_CPP_MAX_VLOG_LEVEL",
+                "value": "0"
+            },
+            {
+                "name": "CUDA_VISIBLE_DEVICES",
+                "value": "0"
+            }
+            // {
+            //     "name": "LD_LIBRARY_PATH",
+            //     "value": "DUMMY"
+            // }
+        ],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "miDebuggerArgs": "-x '${workspaceFolder}/gdb.conf'",
+        "linux": {
+        "sourceFileMap": {
+            "/proc/self/cwd": {
+                "editorPath": "${workspaceFolder}/examples/bazel-examples",
+                "useForBreakpoints": true
+            }
+            }
+        },
+        "setupCommands": [
+            // {
+            //     "description": "Test",
+            //     "text": "python import sys;sys.path.insert(0, '/data00/home/son.nguyen/workspace/tools/python'); from libstdcxx.v6.printers import register_libstdcxx_printers; register_libstdcxx_printers(None)",
+            //     "ignoreFailures": false
+            // },
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            },
+            {
+                "description": "Set Disassembly Flavor to Intel",
+                "text": "-gdb-set disassembly-flavor intel",
+                "ignoreFailures": true
+            },
+            {
+                "description": "",
+                //Configure the search path of the code file here, such as the path where the workspace can be configured in the blade project
+                "text": "directory ${workspaceFolder}"
+            }
+        ]
+    },
+    {
+        "name": "lower_lmhlo_ops",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/examples/bazel-bin/lower_lmhlo_ops/lower_lmhlo_ops",
+        "cwd": "${workspaceFolder}/examples/lower_lmhlo_ops",
+        "args": [],
+        "stopAtEntry": false,
+        "environment": [
+            {
+                "name": "TF_CPP_MAX_VLOG_LEVEL",
+                "value": "0"
+            },
+            {
+                "name": "CUDA_VISIBLE_DEVICES",
+                "value": "0"
+            }
+            // {
+            //     "name": "LD_LIBRARY_PATH",
+            //     "value": "DUMMY"
+            // }
+        ],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "miDebuggerArgs": "-x '${workspaceFolder}/gdb.conf'",
+        "linux": {
+            "sourceFileMap": {
+                "/proc/self/cwd": {
+                    "editorPath": "${workspaceFolder}/examples/bazel-examples",
+                    "useForBreakpoints": true
+                }
+            }
+        },
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            },
+            {
+                "description": "Set Disassembly Flavor to Intel",
+                "text": "-gdb-set disassembly-flavor intel",
+                "ignoreFailures": true
+            },
+            {
+                "description": "",
+                //Configure the search path of the code file here, such as the path where the workspace can be configured in the blade project
+                "text": "directory ${workspaceFolder}"
+            }
+        ]
+    },
+    {
+        "name": "dbg_disc_passes",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/study_disc_passes/main",
+        "cwd": "${workspaceFolder}/study_disc_passes",
+        "args": [
+            "./input.mlir"
+        ],
+        "stopAtEntry": false,
+        "environment": [
+            {
+                "name": "TF_CPP_MAX_VLOG_LEVEL",
+                "value": "0"
+            },
+            {
+                "name": "CUDA_VISIBLE_DEVICES",
+                "value": "0"
+            }
+            // {
+            //     "name": "LD_LIBRARY_PATH",
+            //     "value": "DUMMY"
+            // }
+        ],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "miDebuggerArgs": "-x '${workspaceFolder}/gdb.conf'",
+        // "linux": {
+        //     "sourceFileMap": {
+        //         "/proc/self/cwd": {
+        //             "editorPath": "${workspaceFolder}/examples/bazel-examples",
+        //             "useForBreakpoints": true
+        //         }
+        //     }
+        // },
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            },
+            {
+                "description": "Set Disassembly Flavor to Intel",
+                "text": "-gdb-set disassembly-flavor intel",
+                "ignoreFailures": true
+            },
+            {
+                "description": "",
+                //Configure the search path of the code file here, such as the path where the workspace can be configured in the blade project
+                "text": "directory ${workspaceFolder}"
+            }
+        ]
+    },
+    {
+        "name": "lower_builtin_llvmir",
+        "type": "lldb-dap",
+        "request": "launch",
+        "program": "${workspaceFolder}/examples/lower_builtin_llvmir/build/main",
+        "cwd": "${workspaceFolder}/examples",
+        "args": [],
+        "env": {
+            "CUDA_VISIBLE_DEVICES": "0"
+        }
+    },
+    {
+        "name": "lower_toy_dialect",
+        "type": "lldb-dap",
+        "request": "launch",
+        "console": "integratedTerminal",
+        "program": "${workspaceFolder}/examples/lower_toy_dialect/build/main",
+        "cwd": "${workspaceFolder}/examples/lower_toy_dialect",
+        "args": [
+            "./input.mlir"
+        ],
+        "env": {
+            "CUDA_VISIBLE_DEVICES": "0"
+        }
+    },
+    {
+        "name": "toy_compiler",
+        "type": "lldb-dap",
+        "request": "launch",
+        "console": "integratedTerminal",
+        "program": "${workspaceFolder}/examples/toy_compiler/build/main",
+        "cwd": "${workspaceFolder}/examples/toy_compiler",
+        "args": [
+            "./add_two_tensors.toy"
+        ],
+        "env": {
+            "CUDA_VISIBLE_DEVICES": "0",
+            "CUDA_DIR": "/usr/local/cuda-12.4"
+        }
+    },
+    {
+        "name": "toy_compiler_test",
+        "type": "lldb-dap",
+        "request": "launch",
+        "console": "integratedTerminal",
+        "program": "${workspaceFolder}/examples/toy_compiler/build/test",
+        "cwd": "${workspaceFolder}/examples/toy_compiler",
+        "args": [
+            "./libkernel.so",
+            "15"
+        ],
+        "env": {
+            "CUDA_VISIBLE_DEVICES": "0",
+            "CUDA_DIR": "/usr/local/cuda-12.4"
+        }
+    }
+  ]
+}

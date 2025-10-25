@@ -1,0 +1,7 @@
+build/
+.cmake.sha256
+*.ptx
+*.cubin
+*.mlir
+*.o
+*.so
