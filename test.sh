@@ -2,6 +2,5 @@
 
 set -e
 
-# build/bin/test cubinFile kernelName numElements blockSize
-# Note: blockSize MUST be equal to the value that was set at compile time
+# Adds two 256-element vectors.
 ./output/bin/add_two_vectors ./libkernel.so 256
