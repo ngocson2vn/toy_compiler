@@ -50,11 +50,11 @@ find_library(CUDA_DRIVER_LIBRARY
 message(STATUS "CUDA_DRIVER_LIBRARY: ${CUDA_DRIVER_LIBRARY}")
 
 # main
-add_executable(main 
+add_executable(compiler
   main.cpp
 )
-target_compile_options(main PRIVATE -fno-rtti -g -O0)
-target_link_libraries(main PRIVATE
+target_compile_options(compiler PRIVATE -fno-rtti -g -O0)
+target_link_libraries(compiler PRIVATE
   frontend
   middleend
   backend
@@ -91,15 +91,15 @@ target_link_libraries(main PRIVATE
 
 
 #===---------------------------------------------------------===#
-#                  Build a test client binary
+#             Build a add_two_vectors client binary
 #===---------------------------------------------------------===#
-add_executable(test
+add_executable(add_two_vectors
   runtime/CudaRuntimeWrappers.cpp
-  test.cpp
+  add_two_vectors.cpp
 )
-target_compile_options(test PRIVATE -fno-rtti -g -O0)
-target_link_options(test PUBLIC -rdynamic)
-target_link_libraries(test PUBLIC
+target_compile_options(add_two_vectors PRIVATE -fno-rtti -g -O0)
+target_link_options(add_two_vectors PUBLIC -rdynamic)
+target_link_libraries(add_two_vectors PUBLIC
   runtime
   ${CUDA_DRIVER_LIBRARY}
 )

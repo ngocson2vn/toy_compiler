@@ -1,4 +1,6 @@
 build/
+output/
+.vscode/vc.*
 .cmake.sha256
 *.ptx
 *.cubin

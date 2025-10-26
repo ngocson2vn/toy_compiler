@@ -49,3 +49,12 @@ echo "Run ninja build"
 echo "==================================================="
 cd ${ROOT_DIR}/build
 cmake --build . -v
+
+echo
+echo "==================================================="
+echo "Copy binaries to output/bin"
+echo "==================================================="
+cd ${ROOT_DIR}/
+rsync -avP build/compiler output/bin/
+rsync -avP build/add_two_vectors output/bin/
+find output/

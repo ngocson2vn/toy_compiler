@@ -13,7 +13,7 @@ using namespace runtime;
 using DataType = float;
 using AddTwoVectorsFuncType = void (*)(void* ctx, void*, void*, void*, int64_t);
 
-static constexpr char hostFuncName[] = "add_two_vectors";
+static constexpr char kAddTwoVectors[] = "add_two_vectors";
 
 int main(int argc, char** argv) {
   if (argc < 3) {
@@ -55,13 +55,13 @@ int main(int argc, char** argv) {
   printf("\n");
   printf("hInputVec1: ");
   for (int i = 0; i < numElements; i++) {
-    printf("%f ", hInputVec1[i]);
+    printf("%.3f ", hInputVec1[i]);
   }
   printf("\n\n");
 
   printf("hInputVec2: ");
   for (int i = 0; i < numElements; i++) {
-    printf("%f ", hInputVec2[i]);
+    printf("%.3f ", hInputVec2[i]);
   }
   printf("\n\n");
 
@@ -92,13 +92,13 @@ int main(int argc, char** argv) {
   cuda::DevicePtr devOutput = cuda::DevicePtr::alloc(numBytes);
 
   printf("\n");
-  LOG_INFO("Call function %s", hostFuncName);
-  modMgr.call<AddTwoVectorsFuncType>(hostFuncName,
-                                    reinterpret_cast<void*>(runtimeCtx.get()),
-                                    reinterpret_cast<void*>(devPtr1.get()), 
-                                    reinterpret_cast<void*>(devPtr2.get()), 
-                                    reinterpret_cast<void*>(devOutput.get()),
-                                    numElements);
+  LOG_INFO("Call function %s", kAddTwoVectors);
+  modMgr.call<AddTwoVectorsFuncType>(kAddTwoVectors,
+                                     reinterpret_cast<void*>(runtimeCtx.get()),
+                                     reinterpret_cast<void*>(devPtr1.get()),
+                                     reinterpret_cast<void*>(devPtr2.get()),
+                                     reinterpret_cast<void*>(devOutput.get()),
+                                     numElements);
 
   CUDA_CHECK(cuMemcpyDtoHAsync(hOutputVec.data(), devOutput.get(), numBytes, stream));
   CUDA_CHECK(cuStreamSynchronize(stream));
@@ -107,7 +107,7 @@ int main(int argc, char** argv) {
   printf("\n");
   printf("hOutputVec: ");
   for (int i = 0; i < numElements; i++) {
-    printf("%f ", hOutputVec[i]);
+    printf("%.3f ", hOutputVec[i]);
   }
   printf("\n\n");
 
