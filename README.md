@@ -7,7 +7,7 @@ Lowering Pipeline:<br/>
 git submodule update --init --recursive
 make
 ```
-Output: ./build/main
+Output: ./build/compiler
 
 ## Compile add_two_tensors.toy
 ```Bash
