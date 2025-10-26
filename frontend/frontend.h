@@ -11,8 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef TOY_MLIRGEN_H
-#define TOY_MLIRGEN_H
+#pragma once
 
 #include <string>
 
@@ -34,5 +33,3 @@ mlir::OwningOpRef<mlir::ModuleOp> getModule(mlir::MLIRContext& context, const st
 } // namespace frontend
 } // namespace compiler
 } // namespace toy
-
-#endif // TOY_MLIRGEN_H

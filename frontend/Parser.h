@@ -14,8 +14,8 @@
 #ifndef TOY_PARSER_H
 #define TOY_PARSER_H
 
-#include "AST.h"
 #include "Lexer.h"
+#include "AST.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
@@ -178,10 +178,12 @@ private:
     lexer.getNextToken(); // eat identifier.
     
     if (lexer.getCurToken() == '=') {
+      char assignOp = lexer.getCurToken();
       lexer.getNextToken(); // eat '='
       auto dst = std::make_unique<VariableExprAST>(loc, name);
       auto src = parseExpression();
-      return std::make_unique<AssignExprAST>(std::move(loc), std::move(dst), std::move(src));
+      return std::make_unique<AssignExprAST>(std::move(loc), assignOp,
+                                             std::move(dst), std::move(src));
     }
 
     if (lexer.getCurToken() != '(') // Simple variable ref.

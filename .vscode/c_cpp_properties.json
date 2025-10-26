@@ -9,7 +9,9 @@
                 "${workspaceFolder}/llvm-project/lld",
                 "${workspaceFolder}/llvm-project/lld/include",
                 "${workspaceFolder}/llvm-project/build/include",
-                "${workspaceFolder}/llvm-project/build/tools/mlir/include"
+                "${workspaceFolder}/llvm-project/build/tools/mlir/include",
+                "${workspaceFolder}",
+                "${workspaceFolder}/build"
             ],
             "defines": [
                 "GOOGLE_CUDA",
@@ -28,7 +30,9 @@
                     "${workspaceFolder}/llvm-project/lld",
                     "${workspaceFolder}/llvm-project/lld/include",
                     "${workspaceFolder}/llvm-project/build/include",
-                    "${workspaceFolder}/llvm-project/build/tools/mlir/include"
+                    "${workspaceFolder}/llvm-project/build/tools/mlir/include",
+                    "${workspaceFolder}",
+                    "${workspaceFolder}/build"
                 ],
                 "databaseFilename": "${workspaceFolder}/.vscode/vc.db",
                 "limitSymbolsToIncludedHeaders": false

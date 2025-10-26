@@ -31,7 +31,9 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopedHashTable.h"
 
-#include "AST.h"
+#include "mlir/Support/FileUtilities.h"
+#include "llvm/Support/ToolOutputFile.h"
+
 #include "Parser.h"
 #include "toy_dialect.h"
 #include "frontend.h"
@@ -315,7 +317,7 @@ private:
     switch (expr.getKind()) {
     case ExprAST::Expr_Var:
       return mlirGen(cast<VariableExprAST>(expr));
-    case ExprAST::Expr_VarAssign:
+    case ExprAST::Expr_AssignOp:
       return mlirGen(cast<AssignExprAST>(expr));
     case ExprAST::Expr_BinOp:
       return mlirGen(cast<BinaryExprAST>(expr));
@@ -432,19 +434,71 @@ namespace toy {
 namespace compiler {
 namespace frontend {
 
+mlir::LogicalResult canonicalize(mlir::ModuleOp module) {
+  auto& context = *module.getContext();
+
+  // Set up the pass manager
+  context.disableMultithreading();
+  mlir::PassManager pm(&context);
+  std::string errorMessage;
+
+  // lowering
+  auto output = mlir::openOutputFile("lowering_frontend.mlir", &errorMessage);
+  if (!output) {
+    llvm::errs() << errorMessage << "\n";
+    return mlir::failure();
+  }
+
+  mlir::OpPrintingFlags printFlag{};
+  printFlag.printGenericOpForm(false);
+  pm.enableIRPrinting(
+    /*shouldPrintBeforePass=*/[](mlir::Pass* p, mlir::Operation* op) {
+      return false;
+    },
+    /*shouldPrintAfterPass=*/[](mlir::Pass* p, mlir::Operation * op) {
+      return true;
+    },
+    /*printModuleScope=*/true, 
+    /*printAfterOnlyOnChange=*/false,
+    /*printAfterOnlyOnFailure=*/false, 
+    output->os(), printFlag
+  );
+  output->keep();
+
+  // Canonicalization pass
+  pm.addPass(mlir::createCanonicalizerPass());
+
+  // Apply the pass
+  if (failed(pm.run(module))) {
+    llvm::errs() << "Canonicalization passes execution failed\n";
+    return mlir::failure();
+  }
+
+  return mlir::success();
+}
+
 // The public API for codegen.
 mlir::OwningOpRef<mlir::ModuleOp> getModule(mlir::MLIRContext& context, const std::string& inputFilename) {
   // Load our Dialect in this MLIR Context.
   context.getOrLoadDialect<mlir::toy::ToyDialect>();
 
-  // Handle '.toy' input to the compiler.
+  // Build a ModuleAST from .toy source file
   auto moduleAST = parseInputFile(inputFilename);
   if (!moduleAST)
     return nullptr;
 
+  dumpAST(*moduleAST);
+
+  // Generate MLIR ModuleOp from Toy AST
   mlir::OwningOpRef<mlir::ModuleOp> module = mlirGen(context, *moduleAST);
   if (!module)
     return nullptr;
+
+  // Canonicalize ModuleOp
+  if (mlir::failed(canonicalize(module.get()))) {
+    llvm::errs() << "Failed to canonicalize the ModuleOp:\n";
+    llvm::errs() << module.get() << "\n";
+  }
 
   return module;
 }

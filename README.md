@@ -1,4 +1,6 @@
 # Toy ML Compiler
+Lowering Pipeline:<br/>
+<img src="./docs/pipeline.png" width="100%"/>
 
 ## How to build
 ```Bash

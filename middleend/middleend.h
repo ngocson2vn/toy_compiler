@@ -1,3 +1,5 @@
+#pragma once
+
 namespace llvm {
 class LogicalResult;
 } // namespace llvm

@@ -1,4 +1,5 @@
 include "mlir/IR/OpBase.td"
+include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
@@ -9,7 +10,7 @@ def Toy_Dialect : Dialect {
 }
 
 def Toy_FuncOp : Op<Toy_Dialect, "func", [
-    FunctionOpInterface, IsolatedFromAbove
+    FunctionOpInterface, IsolatedFromAbove, OpAsmOpInterface
   ]> {
   let summary = "user defined function operation";
   let description = [{
@@ -30,10 +31,19 @@ def Toy_FuncOp : Op<Toy_Dialect, "func", [
 
   let arguments = (ins
     SymbolNameAttr:$sym_name,
-    TypeAttrOf<FunctionType>:$function_type
+    TypeAttrOf<FunctionType>:$function_type,
+    OptionalAttr<StrAttr>:$sym_visibility,
+    OptionalAttr<DictArrayAttr>:$arg_attrs,
+    OptionalAttr<DictArrayAttr>:$res_attrs
   );
 
   let regions = (region AnyRegion:$body);
+
+  let builders = [OpBuilder<(ins
+    "StringRef":$name, "FunctionType":$type,
+    CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs,
+    CArg<"ArrayRef<DictionaryAttr>", "{}">:$argAttrs)
+  >];
 
   let extraClassDeclaration = [{
     //===------------------------------------------------------------------===//
@@ -47,19 +57,9 @@ def Toy_FuncOp : Op<Toy_Dialect, "func", [
     ArrayRef<Type> getResultTypes() { return getFunctionType().getResults(); }
 
     ::mlir::Region *getCallableRegion() { return isExternal() ? nullptr : &getBody(); }
-
-    void setArgAttrsAttr(::mlir::ArrayAttr attr) {}
-
-    void setResAttrsAttr(::mlir::ArrayAttr attr) {}
-
-    ::mlir::ArrayAttr getArgAttrsAttr() { return {}; }
-
-    ::mlir::ArrayAttr getResAttrsAttr() { return {}; }
-
-    ::mlir::Attribute removeArgAttrsAttr() { return {}; }
-
-    ::mlir::Attribute removeResAttrsAttr() { return {}; }
   }];
+
+  let hasCustomAssemblyFormat = 1;
 }
 
 // def Toy_ConstantOp : Op<Toy_Dialect, "constant"> {

@@ -47,7 +47,7 @@ public:
     Expr_Num,
     Expr_Literal,
     Expr_Var,
-    Expr_VarAssign,
+    Expr_AssignOp,
     Expr_BinOp,
     Expr_Add,
     Expr_Print,
@@ -138,19 +138,22 @@ public:
 
 /// Expression class for defining an assignment
 class AssignExprAST : public ExprAST {
+  char op;
   std::unique_ptr<ExprAST> src;
   std::unique_ptr<ExprAST> dst;
 
 public:
-  AssignExprAST(Location loc, std::unique_ptr<ExprAST> dst, std::unique_ptr<ExprAST> src)
-      : ExprAST(Expr_VarAssign, std::move(loc)), 
+  char getOp() { return op; }
+  AssignExprAST(Location loc, char op, 
+                std::unique_ptr<ExprAST> dst, std::unique_ptr<ExprAST> src)
+      : ExprAST(Expr_AssignOp, std::move(loc)), op(op),
         dst(std::move(dst)), src(std::move(src)) {}
 
   ExprAST *getDst() { return dst.get(); }
   ExprAST *getSrc() { return src.get(); }
 
   /// LLVM style RTTI
-  static bool classof(const ExprAST *c) { return c->getKind() == Expr_VarAssign; }
+  static bool classof(const ExprAST *c) { return c->getKind() == Expr_AssignOp; }
 };
 
 /// Expression class for a return operator.
@@ -279,7 +282,7 @@ public:
   auto end() { return functions.end(); }
 };
 
-void dump(ModuleAST &);
+void dumpAST(ModuleAST &);
 
 } // namespace frontend
 } // namespace compiler

@@ -43,6 +43,8 @@ private:
   void dump(LiteralExprAST *node);
   void dump(VariableExprAST *node);
   void dump(ReturnExprAST *node);
+  void dump(AssignExprAST *node);
+  void dump(AddExprAST *node);
   void dump(BinaryExprAST *node);
   void dump(CallExprAST *node);
   void dump(PrintExprAST *node);
@@ -57,7 +59,6 @@ private:
   int curIndent = 0;
 };
 
-} // namespace
 
 /// Return a formatted string for the location of any node
 template <typename T>
@@ -77,8 +78,8 @@ static std::string loc(T *node) {
 /// Dispatch to a generic expressions to the appropriate subclass using RTTI
 void ASTDumper::dump(ExprAST *expr) {
   llvm::TypeSwitch<ExprAST *>(expr)
-      .Case<BinaryExprAST, CallExprAST, LiteralExprAST, NumberExprAST,
-            PrintExprAST, ReturnExprAST, VarDeclExprAST, VariableExprAST>(
+      .Case<BinaryExprAST, AssignExprAST, CallExprAST, LiteralExprAST, NumberExprAST,
+            AddExprAST, PrintExprAST, ReturnExprAST, VarDeclExprAST, VariableExprAST>(
           [&](auto *node) { this->dump(node); })
       .Default([&](ExprAST *) {
         // No match, fallback to a generic message
@@ -171,6 +172,25 @@ void ASTDumper::dump(BinaryExprAST *node) {
   dump(node->getRHS());
 }
 
+/// Print an assign operation, first destination, then recurse into source.
+void ASTDumper::dump(AssignExprAST *node) {
+  INDENT();
+  llvm::errs() << "AssignOp: " << node->getOp() << " " << loc(node) << "\n";
+  dump(node->getDst());
+  dump(node->getSrc());
+}
+
+/// Print an assign operation, first destination, then recurse into source.
+void ASTDumper::dump(AddExprAST *node) {
+  INDENT();
+  llvm::errs() << "Add [ " << loc(node) << "\n";
+  for (auto& arg : node->getArgs()) {
+    dump(arg.get());
+  }
+  indent();
+  llvm::errs() << "]\n";
+}
+
 /// Print a call expression, first the callee name and the list of args by
 /// recursing into each individual argument.
 void ASTDumper::dump(CallExprAST *node) {
@@ -220,17 +240,21 @@ void ASTDumper::dump(FunctionAST *node) {
 
 /// Print a module, actually loop over the functions and print them in sequence.
 void ASTDumper::dump(ModuleAST *node) {
-  INDENT();
   llvm::errs() << "Module:\n";
   for (auto &f : *node)
     dump(&f);
 }
 
+} // namespace
+
+
+namespace toy {
 namespace compiler {
 namespace frontend {
 
 // Public API
-void dump(ModuleAST &module) { ASTDumper().dump(&module); }
+void dumpAST(ModuleAST &module) { ASTDumper().dump(&module); }
 
 } // namespace frontend
 } // namespace compiler
+} // namespace toy

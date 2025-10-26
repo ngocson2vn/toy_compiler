@@ -55,6 +55,7 @@ echo "==================================================="
 echo "Copy binaries to output/bin"
 echo "==================================================="
 cd ${ROOT_DIR}/
+mkdir -p output/bin/
 rsync -avP build/compiler output/bin/
 rsync -avP build/add_two_vectors output/bin/
 find output/

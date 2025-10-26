@@ -7,23 +7,10 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/Linalg/IR/Linalg.h"
-#include "mlir/Dialect/Linalg/Passes.h"
-#include "mlir/Dialect/GPU/Transforms/Passes.h"
-#include "mlir/Dialect/LLVMIR/Transforms/OptimizeForNVVM.h"
 
 // MLIR Passes
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/Passes.h"
-#include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
-#include "mlir/Conversion/SCFToGPU/SCFToGPU.h"
-#include "mlir/Conversion/SCFToGPU/SCFToGPUPass.h"
-#include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
-#include "mlir/Conversion/NVVMToLLVM/NVVMToLLVM.h"
-#include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
-#include "mlir/Target/LLVMIR/Dialect/NVVM/NVVMToLLVMIRTranslation.h"
-#include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
-#include "mlir/Target/LLVMIR/Export.h"
 
 #include "mlir/Support/FileUtilities.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -41,14 +28,6 @@ namespace middleend {
 
 LogicalResult lower(mlir::ModuleOp& module) {
   auto& context = *module.getContext();
-
-  // Load necessary dialects
-  context.getOrLoadDialect<mlir::toy::ToyDialect>();
-  context.getOrLoadDialect<func::FuncDialect>();
-  context.getOrLoadDialect<arith::ArithDialect>();
-  context.getOrLoadDialect<memref::MemRefDialect>();
-  context.getOrLoadDialect<linalg::LinalgDialect>();
-  context.getOrLoadDialect<scf::SCFDialect>();
 
   // Set up the pass manager
   context.disableMultithreading();

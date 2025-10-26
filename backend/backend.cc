@@ -52,7 +52,7 @@ namespace compiler {
 namespace backend {
 
 // Initialize
-bool __initialized = []() -> bool {
+static bool __initialized = []() -> bool {
   static std::once_flag init_flag;
   std::call_once(init_flag, []() {
     
