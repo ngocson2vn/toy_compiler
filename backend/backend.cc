@@ -186,8 +186,6 @@ llvm::LogicalResult lower(ModuleOp& module) {
     return failure();
   }
 
-  module.print(output->os(), printFlag);
-
   return success();
 }
 
