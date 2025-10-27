@@ -20,14 +20,15 @@ class ModuleMgr {
 
   bool ok();
 
-  template <typename FuncType, typename... Arg>
+  template <typename... Arg>
   bool call(const char* funcName, Arg... arg) {
     void* funcHandle = getFunc(funcName);
     if (!funcHandle) {
       return false;
     }
 
-    auto funcPtr = reinterpret_cast<FuncType>(funcHandle);
+    using FuncPtrType = void (*)(Arg...);
+    auto funcPtr = reinterpret_cast<FuncPtrType>(funcHandle);
     (funcPtr)(arg...);
 
     return true;

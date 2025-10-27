@@ -8,11 +8,6 @@
 
 using DataType = float;
 
-// The first parameter is a pointer to RuntimeCtx object.
-// The rest of parameters are identical to the kernel function 
-// defined in the add_two_vectors.toy source file.
-using AddTwoVectorsFuncType = void (*)(void* ctx, void*, void*, void*, int64_t);
-
 // Kernel function name defined in the add_two_vectors.toy source file.
 static constexpr char kAddTwoVectors[] = "add_two_vectors";
 
@@ -95,12 +90,20 @@ int main(int argc, char** argv) {
 
   printf("\n");
   LOG_INFO("Call function %s", kAddTwoVectors);
-  bool ok = modMgr.call<AddTwoVectorsFuncType>(kAddTwoVectors,
-                                     reinterpret_cast<void*>(runtimeCtx.get()),
-                                     reinterpret_cast<void*>(devPtr1.get()),
-                                     reinterpret_cast<void*>(devPtr2.get()),
-                                     reinterpret_cast<void*>(devOutput.get()),
-                                     numElements);
+
+  // Function arguments:
+  //   - arg0: An additional pointer to RuntimeCtx object which holds a CUstream pointer
+  // The arg1 ~ arg4 are matched with the original function parameters
+  //   - arg1: The pointer to the first device vector
+  //   - arg2: The pointer to the second device vector
+  //   - arg3: The pointer to the result device vector
+  //   - arg4: The number of elements
+  bool ok = modMgr.call(kAddTwoVectors,
+                        /*arg0*/reinterpret_cast<void*>(runtimeCtx.get()),
+                        /*arg1*/reinterpret_cast<void*>(devPtr1.get()),
+                        /*arg2*/reinterpret_cast<void*>(devPtr2.get()),
+                        /*arg3*/reinterpret_cast<void*>(devOutput.get()),
+                        /*arg4*/numElements);
 
   if (!ok) {
     return EXIT_FAILURE;
