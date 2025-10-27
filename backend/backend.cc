@@ -68,7 +68,7 @@ static bool __initialized = []() -> bool {
   return true;
 }();
 
-llvm::LogicalResult lower(ModuleOp& module) {
+llvm::LogicalResult lower(ModuleOp& module, const std::string& targetArch) {
   auto& context = *module.getContext();
 
   // Load necessary dialects
@@ -162,7 +162,7 @@ llvm::LogicalResult lower(ModuleOp& module) {
   // Lower GPUModuleOp to CUBIN
   //============================================================================
   mlir::GpuNVVMAttachTargetOptions nvvmTargetOptions;
-  nvvmTargetOptions.chip = cuda::getArch();
+  nvvmTargetOptions.chip = targetArch;
   nvvmTargetOptions.features = cuda::getFeatures();
   pm.addPass(mlir::createGpuNVVMAttachTarget(nvvmTargetOptions));
 

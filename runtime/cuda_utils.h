@@ -1,8 +1,9 @@
 #pragma once
 
-#include <cuda.h>
 #include <cstdio>
 #include <stdexcept>
+
+#include <cuda.h>
 
 #define STRINGIFY(x) #x
 #define TO_STR(x) STRINGIFY(x)

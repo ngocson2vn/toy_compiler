@@ -19,6 +19,11 @@ static cl::opt<std::string> inputFilename(cl::Positional,
                                           cl::init("-"),
                                           cl::value_desc("filename"));
 
+static cl::opt<std::string> targetArch(cl::Positional,
+                                          cl::desc("<target sm arch>"),
+                                          cl::init("sm_75"),
+                                          cl::value_desc("sm arch"));
+
 int main(int argc, char **argv) {
   // Register any command line options.
   mlir::registerAsmPrinterCLOptions();
@@ -41,7 +46,8 @@ int main(int argc, char **argv) {
   llvm::outs() << "\nAfter middleend MLIR module:\n";
   mod.dump();
 
-  auto beStatus = backend::lower(mod);
+  llvm::outs() << "\nTarget SM arch: " << targetArch.getValue() << "\n";
+  auto beStatus = backend::lower(mod, targetArch.getValue());
   if (beStatus.failed()) {
     llvm::errs() << "[backend] failed to lower mlir::ModuleOp\n";
     return 1;

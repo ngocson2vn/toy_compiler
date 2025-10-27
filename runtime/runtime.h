@@ -2,6 +2,7 @@
 
 #include <vector>
 
+#include "common/common.h"
 #include "cuda_utils.h"
 
 namespace runtime {
@@ -10,17 +11,6 @@ struct RuntimeCtx {
   CUstream stream;
 };
 
-struct InputType {
-  void* ptr;
-  std::size_t bytes;
-};
-
-struct OutputType {
-  cuda::DevicePtr devPtr;
-  std::size_t bytes;
-};
-
-using FuncType = void (*)(const void** args);
 
 class ModuleMgr {
  public:
@@ -48,8 +38,10 @@ class ModuleMgr {
 
  private:
   const char* modulePath_;
-  void* moduleHandle_;
+  void* moduleHandle_ = nullptr;
   bool loaded_ = false;
 };
 
 } // namespace runtime
+
+using namespace runtime;

@@ -10,31 +10,6 @@ namespace fs = std::filesystem;
 
 namespace cuda {
 
-status::Result<cudaDeviceProp> getDeviceProperties() {
-  int dev = 0;
-  std::string defaultErrMsg = "Failed to get Device Properties";
-  cudaError_t err = cudaSetDevice(dev);
-  if (err != cudaError::cudaSuccess) {
-    std::string errMsg = cudaGetErrorString(err);
-    return {
-      {},
-      errMsg.empty() ? defaultErrMsg : errMsg
-    };
-  }
-
-  cudaDeviceProp deviceProp;
-  err = cudaGetDeviceProperties(&deviceProp, dev);
-  if (err != cudaError::cudaSuccess) {
-    std::string errMsg = cudaGetErrorString(err);
-    return {
-      {},
-      errMsg.empty() ? defaultErrMsg : errMsg
-    };
-  }
-
-  return std::move(deviceProp);
-}
-
 status::Result<std::string> getCudaRoot() {
   fs::path cudaRoot = toy::utils::getStrEnv("CUDA_ROOT");
   if (cudaRoot.empty()) {
@@ -55,30 +30,6 @@ status::Result<std::string> getCudaRoot() {
   return cudaRoot.string();
 }
 
-int getComputeCapability() {
-  auto devPropRes = getDeviceProperties();
-  if (!devPropRes.ok()) {
-    std::cerr << devPropRes.error_message() << "\n";
-    std::abort();
-  }
-
-  auto devProp = devPropRes.value();
-  auto cc = devProp.major * 10 + devProp.minor;
-  if (cc < 75) {
-    std::cerr << "Unsupported GPU with Compute Capability " << cc << "\n";
-    std::abort();
-  }
-  std::cout << "GPU Compute Capability: " << cc << "\n";
-
-  return devProp.major * 10 + devProp.minor;
-}
-
-static const int kComputeCapability = getComputeCapability();
-
-std::string getArch() {
-  return std::string("sm_").append(std::to_string(kComputeCapability));
-}
-
 std::string getSupportedPtxVersion() {
   int cudaRuntimeVersion;
   cudaError_t err = cudaRuntimeGetVersion(&cudaRuntimeVersion);
@@ -94,7 +45,7 @@ std::string getSupportedPtxVersion() {
   }
 
   std::string ptxVersion = std::to_string(major).append(std::to_string(minor));
-  std::cout << "ptxVersion: " << ptxVersion << std::endl;
+  std::cout << "Supported PTX version: " << ptxVersion << std::endl;
 
   return ptxVersion;
 }
@@ -115,17 +66,6 @@ std::string getLibdevice() {
   return std::string(cudaRoot.value()).append("/nvvm/libdevice/libdevice.10.bc");
 }
 
-status::Result<int> ParseCudaArch(const std::string& arch_str) {
-  auto prefixPos = arch_str.find("sm_");
-  if (prefixPos == std::string::npos) {
-    return {
-      0,
-      "Could not parse cuda architecture prefix (expected sm_)"
-    };
-  }
-
-  return std::stoi(arch_str.substr(3, arch_str.size() - 3));
-}
 
 // Ensure that CUDA_ROOT, ptxas, and libdevice exist
 static bool __cuda_check = []() -> bool {

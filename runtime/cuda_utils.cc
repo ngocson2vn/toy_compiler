@@ -1,22 +1,6 @@
-#include <cstdio>
-#include <stdexcept>
 #include "cuda_utils.h"
 
 namespace runtime::cuda {
-
-static bool __initialized = []() {
-  CUDA_CHECK_ABORT(cuInit(0));
-
-  CUdevice device;
-  CUDA_CHECK_ABORT(cuDeviceGet(&device, 0));
-
-  static CUcontext context;
-  CUDA_CHECK_ABORT(cuDevicePrimaryCtxRetain(&context, device));
-  CUDA_CHECK_ABORT(cuCtxPushCurrent(context));
-
-  fprintf(stdout, "INFO Successfully initialized CUDA\n");
-  return true;
-}();
 
 DevicePtr copyH2D(void* hostPtr, std::size_t numBytes) {
   CUdeviceptr devPtr = 0;
@@ -33,5 +17,38 @@ DevicePtr copyH2DAsync(void* hostPtr, std::size_t numBytes, CUstream hStream) {
 
   return devPtr;
 }
+
+static bool __initialized = []() {
+  CUDA_CHECK_ABORT(cuInit(0));
+
+  CUdevice device;
+  CUDA_CHECK_ABORT(cuDeviceGet(&device, 0));
+
+  static CUcontext context;
+  CUDA_CHECK_ABORT(cuDevicePrimaryCtxRetain(&context, device));
+  CUDA_CHECK_ABORT(cuCtxPushCurrent(context));
+
+  int major = 0;
+  int minor = 0;
+  CUDA_CHECK_ABORT(
+    cuDeviceGetAttribute(
+      &major, 
+      CUdevice_attribute_enum::CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR,
+      device
+    ));
+  CUDA_CHECK_ABORT(
+    cuDeviceGetAttribute(
+      &minor, 
+      CUdevice_attribute_enum::CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR,
+      device
+    ));
+
+  int cc = major * 10 + minor;
+
+  fprintf(stdout, "INFO Successfully initialized CUDA!\n");
+  fprintf(stdout, "INFO Device Compute Capability: %d\n", cc);
+
+  return true;
+}();
 
 } // namespace runtime::cuda

@@ -3,16 +3,17 @@
 #include <string>
 #include <vector>
 
-#include <dlfcn.h>
-
-#include "common/common.h"
 #include "runtime/runtime.h"
 
-using namespace runtime;
 
 using DataType = float;
+
+// The first parameter is a pointer to RuntimeCtx object.
+// The rest of parameters are identical to the kernel function 
+// defined in the add_two_vectors.toy source file.
 using AddTwoVectorsFuncType = void (*)(void* ctx, void*, void*, void*, int64_t);
 
+// Kernel function name defined in the add_two_vectors.toy source file.
 static constexpr char kAddTwoVectors[] = "add_two_vectors";
 
 int main(int argc, char** argv) {
@@ -38,6 +39,12 @@ int main(int argc, char** argv) {
   //
   // Client code
   //
+
+  // Load shared object file
+  ModuleMgr modMgr(libkernelPath);
+  if (!modMgr.ok()) {
+    return EXIT_FAILURE;
+  }
 
   // Allocate host input
   std::vector<DataType> hInputVec1(numElements, 0.0f);
@@ -65,11 +72,6 @@ int main(int argc, char** argv) {
   }
   printf("\n\n");
 
-  ModuleMgr modMgr(libkernelPath);
-  if (!modMgr.ok()) {
-    return EXIT_FAILURE;
-  }
-
   CUstream stream;
   CUDA_CHECK(cuStreamCreate(&stream, CUstream_flags_enum::CU_STREAM_NON_BLOCKING));
   std::unique_ptr<RuntimeCtx> runtimeCtx(new RuntimeCtx());
@@ -93,12 +95,16 @@ int main(int argc, char** argv) {
 
   printf("\n");
   LOG_INFO("Call function %s", kAddTwoVectors);
-  modMgr.call<AddTwoVectorsFuncType>(kAddTwoVectors,
+  bool ok = modMgr.call<AddTwoVectorsFuncType>(kAddTwoVectors,
                                      reinterpret_cast<void*>(runtimeCtx.get()),
                                      reinterpret_cast<void*>(devPtr1.get()),
                                      reinterpret_cast<void*>(devPtr2.get()),
                                      reinterpret_cast<void*>(devOutput.get()),
                                      numElements);
+
+  if (!ok) {
+    return EXIT_FAILURE;
+  }
 
   CUDA_CHECK(cuMemcpyDtoHAsync(hOutputVec.data(), devOutput.get(), numBytes, stream));
   CUDA_CHECK(cuStreamSynchronize(stream));

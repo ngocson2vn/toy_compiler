@@ -10,7 +10,13 @@ namespace toy {
 namespace compiler {
 namespace backend {
 
-llvm::LogicalResult lower(mlir::ModuleOp& module);
+/**
+ * \brief Lower ModuleOp to CUBIN and host code
+ *
+ * \param module      - ModuleOp to be lowered
+ * \param targetArch  - Target SM architecture, for example, sm_86, sm_90a
+ */
+llvm::LogicalResult lower(mlir::ModuleOp& module, const std::string& targetArch);
 
 } // namespace backend
 } // namespace compiler

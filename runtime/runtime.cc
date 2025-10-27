@@ -11,6 +11,7 @@ ModuleMgr::ModuleMgr(const char* modulePath) : modulePath_(modulePath) {
   void* handle = dlopen(modulePath_, RTLD_NOW | RTLD_GLOBAL);
   if (!handle) {
     LOG_ERROR("Failed to load %s, error: %s", modulePath_, dlerror());
+    return;
   }
 
   moduleHandle_ = handle;
