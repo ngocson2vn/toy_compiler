@@ -1028,3 +1028,24 @@ mgpuCuSparseLtSpMM(void *a, void *b, void *c, void *d_workspace,
 
 #endif // MLIR_ENABLE_CUDA_CUSPARSELT
 #endif // MLIR_ENABLE_CUDA_CUSPARSE
+
+namespace {
+
+struct Registrar {
+  std::vector<void*> keepFuncs;
+  Registrar() {
+    keepFuncs = {
+      reinterpret_cast<void*>(mgpuModuleLoad),
+      reinterpret_cast<void*>(mgpuModuleUnload),
+      reinterpret_cast<void*>(mgpuModuleGetFunction),
+      reinterpret_cast<void*>(mgpuLaunchKernel),
+    };
+  }
+};
+
+}
+
+bool __registerCudaWrappers() {
+  static Registrar registrar;
+  return true;
+}

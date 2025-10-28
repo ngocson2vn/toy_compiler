@@ -46,3 +46,5 @@ void* ModuleMgr::getFunc(const char* name) {
 }
 
 } // namespace runtime
+
+static bool __initialized = __registerCudaWrappers();

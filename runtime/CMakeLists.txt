@@ -1,4 +1,5 @@
 add_library(runtime
-  runtime.cc
+  CudaRuntimeWrappers.cpp
   cuda_utils.cc
+  runtime.cc
 )

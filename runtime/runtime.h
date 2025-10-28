@@ -45,4 +45,5 @@ class ModuleMgr {
 
 } // namespace runtime
 
+bool __registerCudaWrappers();
 using namespace runtime;

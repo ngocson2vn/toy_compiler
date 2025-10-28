@@ -93,8 +93,8 @@ target_link_libraries(compiler PRIVATE
 #===---------------------------------------------------------===#
 #             Build a add_two_vectors client binary
 #===---------------------------------------------------------===#
+# runtime/CudaRuntimeWrappers.cpp
 add_executable(add_two_vectors
-  runtime/CudaRuntimeWrappers.cpp
   add_two_vectors.cpp
 )
 target_compile_options(add_two_vectors PRIVATE -fno-rtti -g -O0)
