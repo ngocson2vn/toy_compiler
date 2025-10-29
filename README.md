@@ -1,4 +1,7 @@
 # Toy ML Compiler
+What it can do is compile a simple [add_two_vectors](./add_two_vectors.toy) function, written in a toy DSL, into a real CUDA kernel that can be launched on an NVIDIA GPU.
+<br/>
+
 Lowering Pipeline:<br/>
 <img src="./docs/pipeline.png" width="100%"/>
 <br/>
