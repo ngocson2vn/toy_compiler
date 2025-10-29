@@ -23,3 +23,7 @@ Output: ./libkernel.so
 ```Bash
 ./test.sh
 ```
+
+## Discussion Channel
+If you are interested in this toy project, feel free to reach out to me on LinkedIn.<br/>
+My LinkedIn: https://www.linkedin.com/in/ngocson2vn/
