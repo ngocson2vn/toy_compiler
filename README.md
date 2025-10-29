@@ -7,8 +7,18 @@ Runtime:<br/>
 <img src="./docs/runtime.png" width="100%"/>
 
 ## How to build
+**Prerequisites**<br/>
+```
+1. CUDA Toolkit version >= 12.4
+2. CMake version >= 3.31.6
+3. Clang version >= 17
+```
+<br/>
+
+**Build commands**
 ```Bash
 git submodule update --init --recursive
+export CUDA_ROOT=/usr/local/cuda-12.4
 make
 ```
 Output: ./build/compiler
