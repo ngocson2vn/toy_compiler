@@ -142,5 +142,6 @@
     "__target_macros": "cpp",
     "__functional_base": "cpp"
   },
-  "mlir.tablegen_server_path": "/data00/home/son.nguyen/workspace/learnmlir/llvm-project/build/bin/tblgen-lsp-server"
+  "mlir.tablegen_server_path": "/data00/home/son.nguyen/workspace/learnmlir/llvm-project/build/bin/tblgen-lsp-server",
+  "lldb-dap.executable-path": "/usr/lib/llvm-17/bin/lldb-vscode"
 }
