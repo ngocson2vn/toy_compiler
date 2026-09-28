@@ -3,26 +3,26 @@
 set -e
 
 ROOT_DIR=$(pwd)
-echo "ROOT_DIR=${ROOT_DIR}"
-mkdir -p ${ROOT_DIR}/build
-
-pre_hash=""
-if [ -f ./.cmake.sha256 ]; then
-  pre_hash=$(cat ./.cmake.sha256)
+echo "==================================================="
+echo "1. Update git submodules"
+echo "==================================================="
+if [[ ! -f ./.git_submodule_updated ]]; then
+  git submodule update --init --recursive
+  touch ./.git_submodule_updated
 fi
-now_hash=$(sha256sum ./CMakeLists.txt | awk '{print $1}')
+echo "DONE"
 
-if [ "${now_hash}" != "${pre_hash}" ]; then
-  echo "${now_hash} != ${pre_hash}"
-  echo
-  echo "==================================================="
-  echo "Generate ninja build file"
-  echo "==================================================="
-  cd ${ROOT_DIR}/build
+echo
+echo "==================================================="
+echo "2. Build llvm-project/llvm"
+echo "==================================================="
+LLVM_BUILD_DIR=${ROOT_DIR}/llvm-project/build
+
+if [ ! -f ./.llvm.build.done ]; then
+  mkdir -p ${LLVM_BUILD_DIR}
 
   # -DCMAKE_BUILD_TYPE=Debug | Release \
-
-  cmake -G Ninja .. \
+  cmake -G Ninja -S llvm-project/llvm -B ${LLVM_BUILD_DIR} \
     -DCMAKE_BUILD_TYPE=Debug \
     -DLLVM_ENABLE_PROJECTS="mlir;compiler-rt" \
     -DLLVM_BUILD_EXAMPLES=OFF \
@@ -34,25 +34,31 @@ if [ "${now_hash}" != "${pre_hash}" ]; then
     -DLLVM_CCACHE_BUILD=ON \
     -DCOMPILER_RT_BUILD_GWP_ASAN=OFF \
     -DLLVM_INCLUDE_TESTS=OFF \
-    -DCOMPILER_RT_BUILD_SANITIZERS=ON \
-    -DCUDA_ROOT=${CUDA_ROOT}
+    -DCOMPILER_RT_BUILD_SANITIZERS=ON
 
-  cmake --build .
-
-  cd ${ROOT_DIR}/
-  yes | echo ${now_hash} > ./.cmake.sha256
+  cmake --build ${LLVM_BUILD_DIR}
+  touch ./.llvm.build.done
+  echo "DONE"
 fi
+echo "DONE"
 
 echo
 echo "==================================================="
-echo "Run ninja build"
+echo "3. Build toy compiler"
 echo "==================================================="
-cd ${ROOT_DIR}/build
-cmake --build . -v
+mkdir -p ${ROOT_DIR}/build
+
+cmake -G Ninja -S . -B build \
+  -DCUDA_ROOT=${CUDA_ROOT} \
+  -DMLIR_DIR=${LLVM_BUILD_DIR}/lib/cmake/mlir
+
+# cmake --build build/ -v
+cmake --build build/
+echo "DONE"
 
 echo
 echo "==================================================="
-echo "Copy binaries to output/bin"
+echo "4. Copy binaries to output/bin"
 echo "==================================================="
 cd ${ROOT_DIR}/
 mkdir -p output/bin/

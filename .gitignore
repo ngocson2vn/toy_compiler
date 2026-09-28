@@ -1,9 +1,8 @@
 build/
 output/
 .vscode/vc.*
-.cmake.sha256
-*.ptx
+.git_submodule_updated
+.llvm.build.done
 *.cubin
-*.mlir
 *.o
 *.so

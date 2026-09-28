@@ -2,21 +2,39 @@ cmake_minimum_required(VERSION 3.10)
 project(ToyLowering)
 set(CMAKE_CXX_STANDARD 17) 
 
-set(LLVM_BINARY_DIR ${PROJECT_SOURCE_DIR}/llvm-project/build)
-add_subdirectory(llvm-project/llvm ${LLVM_BINARY_DIR})
+#============================================================================
+# MLIR and LLVM
+#============================================================================
+find_package(MLIR REQUIRED CONFIG)
+find_package(LLVM REQUIRED CONFIG)
 
 # LLVM and MLIR headers
-include_directories(llvm-project/llvm/include)
-include_directories(llvm-project/mlir/include)
+message(STATUS "MLIR_INCLUDE_DIRS: ${MLIR_INCLUDE_DIRS}")
+message(STATUS "LLVM_INCLUDE_DIRS: ${LLVM_INCLUDE_DIRS}")
+include_directories(${MLIR_INCLUDE_DIRS})
+include_directories(${LLVM_INCLUDE_DIRS})
 
-# Some headers are generated automatically, which is why we need to include the following directories
-include_directories(${LLVM_BINARY_DIR}/include)
-include_directories(${LLVM_BINARY_DIR}/tools/mlir/include)
+message(STATUS "MLIR_CMAKE_DIR: ${MLIR_CMAKE_DIR}")
+message(STATUS "LLVM_CMAKE_DIR: ${LLVM_CMAKE_DIR}")
+list(APPEND CMAKE_MODULE_PATH "${MLIR_CMAKE_DIR}")
+list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
+message(STATUS "CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
 
-message(STATUS "CMAKE_CURRENT_BINARY_DIR: ${CMAKE_CURRENT_BINARY_DIR}")
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
+# !!! THIS IS IMPORTANT !!!
+# Include the following files to make TableGen/LLVM/MLIR functions available
+include(TableGen)
+include(AddLLVM)
+include(AddMLIR)
 
+set(CLANG_LIB_DIR ${LLVM_BINARY_DIR}/lib/clang/22/lib/x86_64-unknown-linux-gnu)
+message(STATUS "CLANG_LIB_DIR: ${LLVM_BINARY_DIR}/lib/clang/22/lib/x86_64-unknown-linux-gnu")
+
+
+#============================================================================
+# Toy Compiler
+#============================================================================
 include_directories(.)
+include_directories(${PROJECT_BINARY_DIR})
 include_directories(${CUDA_ROOT}/include)
 
 # frontend
@@ -85,7 +103,7 @@ target_link_libraries(compiler PRIVATE
   MLIRTableGen
   LLVMTableGen
   LLVMSupport
-  clang_rt.ubsan_standalone-x86_64
+  ${CLANG_LIB_DIR}/libclang_rt.ubsan_standalone.a
   ${CUDA_RUNTIME_LIBRARY}
 )
 
