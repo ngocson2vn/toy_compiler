@@ -27,7 +27,6 @@ add_dependencies(frontend
   MLIRSupport
   MLIRTableGen
   LLVMSupport
-  clang_rt.ubsan_standalone-x86_64
 )
 
 target_compile_options(frontend PRIVATE -fno-rtti -g -O0)

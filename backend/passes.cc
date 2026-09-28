@@ -99,7 +99,7 @@ struct LowerMemRefToLLVMFuncOpPattern : public mlir::OpConversionPattern<func::F
     rewriter.applySignatureConversion(&entryBlock, sig.value(), typeConverter);
 
     //===============================================================================================
-    // 3. Replace oldFunc with newFunc
+    // 2. Replace oldFunc with newFunc
     //===============================================================================================
     rewriter.replaceOp(oldFunc, newFunc);
     LLVM_DEBUG(llvm::dbgs() << "\nAfter FuncOpConverter:\n" << *newFunc->getParentOp() << "\n\n");
@@ -112,8 +112,7 @@ struct LowerMemRefToLLVMReturnOpPattern : public OpConversionPattern<func::Retur
   using OpConversionPattern<func::ReturnOp>::OpConversionPattern;
 
   LogicalResult matchAndRewrite(func::ReturnOp oldReturnOp, OpAdaptor adaptor, ConversionPatternRewriter &rewriter) const override {
-    auto newReturnOp = rewriter.create<LLVM::ReturnOp>(oldReturnOp.getLoc(), oldReturnOp.getOperands());
-    rewriter.replaceOp(oldReturnOp, newReturnOp);
+    rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(oldReturnOp, adaptor.getOperands());
 
     return success();
   }

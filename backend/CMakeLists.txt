@@ -36,6 +36,5 @@ add_dependencies(backend
   MLIRTableGen
   LLVMSupport
   intrinsics_gen
-  clang_rt.ubsan_standalone-x86_64
 )
 target_compile_options(backend PRIVATE -fno-rtti -g -O0)

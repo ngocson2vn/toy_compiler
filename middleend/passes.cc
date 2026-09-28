@@ -3,9 +3,11 @@
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 
+#include "mlir/IR/Matchers.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 
@@ -14,12 +16,16 @@
 
 #include "frontend/toy_dialect.h"
 
+#define TOY_ARG_ATTR_NAME "toy.dynamic_dim_arg_idx"
+
 using namespace mlir;
 
 namespace mlir::toy {
 
 #define GEN_PASS_DEF_CONVERTTOYTOSTDPASS
+#define GEN_PASS_DEF_CONVERTTOYTOLINALGPASS
 #define GEN_PASS_DEF_CONVERTTENSORTOMEMREFPASS
+#define GEN_PASS_DEF_FOLDMEMREFDIMOPPASS
 #include "middleend/passes.h.inc"
 
 } // namespace mlir::toy
@@ -60,7 +66,7 @@ struct ConvertToyToStdPass : public toy::impl::ConvertToyToStdPassBase<ConvertTo
     registry.insert<func::FuncDialect>();
     registry.insert<arith::ArithDialect>();
     registry.insert<memref::MemRefDialect>();
-    registry.insert<scf::SCFDialect>();
+    registry.insert<linalg::LinalgDialect>();
   }
 
   void runOnOperation() override {
@@ -85,6 +91,177 @@ struct ConvertToyToStdPass : public toy::impl::ConvertToyToStdPassBase<ConvertTo
 };
 
 
+//==============================================================================
+// Toy to Linalg
+//==============================================================================
+struct ToyAddOpConverter : public OpConversionPattern<toy::AddOp> {
+  using OpConversionPattern<toy::AddOp>::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(
+      toy::AddOp op, OpAdaptor adaptor,
+      ConversionPatternRewriter &rewriter) const override {
+
+    auto parentOp = op->getParentOp();
+    LLVM_DEBUG(llvm::dbgs() << "\nBegin ToyAddOpConverter:\n" << *parentOp << "\n\n");
+
+    auto x = op.getLhs();
+    auto y = op.getRhs();
+    auto size = op.getSize();
+
+    auto xArgIdx = cast<BlockArgument>(x).getArgNumber();
+    auto yArgIdx = cast<BlockArgument>(y).getArgNumber();
+    auto sizeArgIdx = cast<BlockArgument>(size).getArgNumber();
+    
+    auto funcOp = op->getParentOfType<func::FuncOp>();
+    funcOp.setArgAttr(xArgIdx, TOY_ARG_ATTR_NAME, rewriter.getI32IntegerAttr(sizeArgIdx));
+    funcOp.setArgAttr(yArgIdx, TOY_ARG_ATTR_NAME, rewriter.getI32IntegerAttr(sizeArgIdx));
+
+    auto out = op.getResult();
+    auto resultType = cast<RankedTensorType>(out.getType());
+
+    // Create output tensor
+    Value dynamicSize = rewriter.create<arith::IndexCastOp>(op.getLoc(), rewriter.getIndexType(), size);
+    Value outTensor = rewriter.create<tensor::EmptyOp>(op.getLoc(), resultType, dynamicSize);
+
+    int64_t rank = resultType.getRank();
+
+    // Indexing maps: identity for x and output, empty or identity for y.
+    SmallVector<AffineExpr> exprs;
+    for (int64_t i = 0; i < rank; ++i) {
+      exprs.push_back(rewriter.getAffineDimExpr(i));
+    }
+    auto xIndexMap = AffineMap::get(rank, 0, exprs, rewriter.getContext());
+    auto yIndexMap = xIndexMap;
+    auto outputIndexMap = xIndexMap;
+    SmallVector<AffineMap> indexingMaps = {xIndexMap, yIndexMap, outputIndexMap};
+
+    // Set iterator types: all parallel for element-wise operation.
+    SmallVector<utils::IteratorType> iteratorTypes(rank, utils::IteratorType::parallel);
+
+    // Create linalg.generic operation with memref semantics.
+    auto linalgOp = rewriter.create<linalg::GenericOp>(
+      op.getLoc(),
+      /*resultTypes=*/TypeRange{resultType},
+      /*inputs=*/ValueRange{x, y},
+      /*outputs=*/ValueRange{outTensor},
+      /*indexingMaps=*/indexingMaps,
+      /*iteratorTypes=*/iteratorTypes,
+      [&](OpBuilder &nestedBuilder, Location loc, ValueRange args) {
+        Value xVal = args[0];
+        Value yVal = args[1];
+        Value result = nestedBuilder.create<arith::AddFOp>(loc, xVal, yVal);
+        // nestedBuilder.create<linalg::YieldOp>(loc);
+        nestedBuilder.create<linalg::YieldOp>(loc, result);
+      }
+    );
+
+    rewriter.replaceOp(op, linalgOp);
+
+    LLVM_DEBUG(llvm::dbgs() << "\nAfter ToyAddOpConverter:\n" << *parentOp << "\n");
+
+    return success();
+  }
+};
+
+struct ToyStoreOpConverter : public OpConversionPattern<toy::StoreOp> {
+  using OpConversionPattern<toy::StoreOp>::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(
+      toy::StoreOp op, OpAdaptor adaptor,
+      ConversionPatternRewriter &rewriter) const override {
+    auto src = adaptor.getSrc();
+    auto dst = op.getDst();
+
+
+    SmallVector<Value, 1> newOuts = {dst};
+    auto genericOp = src.getDefiningOp<linalg::GenericOp>();
+    if (!!genericOp && genericOp.getNumDpsInits() == 1) {
+      auto newGenericOp = rewriter.clone(*genericOp);
+      newGenericOp->setOperands(
+        genericOp.getNumDpsInputs(),
+        genericOp.getNumDpsInits(),
+        newOuts
+      );
+
+      rewriter.replaceOp(op, newGenericOp);
+      return success();
+    }
+
+    LLVM_DEBUG(llvm::dbgs() << "src op: " << *src.getDefiningOp() << "\n");
+
+    // 
+    // If `src` is not a `linalg::GenericOp`, then
+    // lower `toy::StoreOp` to a `linalg::GenericOp`
+    //
+    auto resultType = cast<RankedTensorType>(dst.getType());
+    int64_t rank = resultType.getRank();
+
+    // Indexing maps: identity for x and output, empty or identity for y.
+    SmallVector<AffineExpr> exprs;
+    for (int64_t i = 0; i < rank; ++i) {
+      exprs.push_back(rewriter.getAffineDimExpr(i));
+    }
+    auto srcIndexMap = AffineMap::get(rank, 0, exprs, rewriter.getContext());
+    auto dstIndexMap = srcIndexMap;
+    SmallVector<AffineMap> indexingMaps = {srcIndexMap, dstIndexMap};
+
+    // Set iterator types: all parallel for element-wise operation.
+    SmallVector<utils::IteratorType> iteratorTypes(rank, utils::IteratorType::parallel);
+
+    // Create linalg.generic operation with memref semantics.
+    auto linalgOp = rewriter.create<linalg::GenericOp>(
+      op.getLoc(),
+      /*resultTypes=*/TypeRange{resultType},
+      /*inputs=*/ValueRange{src},
+      /*outputs=*/ValueRange{dst},
+      /*indexingMaps=*/indexingMaps,
+      /*iteratorTypes=*/iteratorTypes,
+      [&](OpBuilder &nestedBuilder, Location loc, ValueRange args) {
+        // nestedBuilder.create<linalg::YieldOp>(loc);
+        nestedBuilder.create<linalg::YieldOp>(loc, args[0]);
+      }
+    );
+
+    // Erase toy::StoreOp
+    rewriter.replaceOp(op, linalgOp);
+
+    return success();
+  }
+};
+
+struct ConvertToyToLinalgPass : public toy::impl::ConvertToyToLinalgPassBase<ConvertToyToLinalgPass> {
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<func::FuncDialect>();
+    registry.insert<arith::ArithDialect>();
+    registry.insert<linalg::LinalgDialect>();
+  }
+
+  void runOnOperation() override {
+    // Define the conversion target (arith dialect is legal)
+    ConversionTarget target(getContext());
+    target.addLegalDialect<func::FuncDialect>();
+    target.addLegalDialect<tensor::TensorDialect>();
+    target.addLegalDialect<arith::ArithDialect>();
+    target.addLegalDialect<linalg::LinalgDialect>();
+    target.addLegalDialect<toy::ToyDialect>();
+
+    target.addIllegalOp<toy::AddOp, toy::StoreOp>();
+
+    // Define the conversion patterns
+    RewritePatternSet patterns(&getContext());
+    patterns.add<ToyAddOpConverter, ToyStoreOpConverter>(&getContext());
+
+    // Apply the conversion
+    if (failed(applyPartialConversion(getOperation(), target, std::move(patterns)))) {
+      signalPassFailure();
+    }
+  }
+};
+
+
+//==============================================================================
+// Tensor to MemRef
+//==============================================================================
 // Step 1: Define the TypeConverter
 struct TensorToMemRefConverter : public TypeConverter {
   TensorToMemRefConverter() {
@@ -173,8 +350,18 @@ struct FuncOpConverter : public OpConversionPattern<func::FuncOp> {
       llvm::errs() << "Failed to convert entry block signature\n";
       return failure();
     }
-
     rewriter.applySignatureConversion(&entryBlock, sig.value(), typeConverter);
+
+    //===============================================================================================
+    // 2. Update func::ReturnOp operands
+    //===============================================================================================
+    auto retOp = cast<func::ReturnOp>(newFunc.front().getTerminator());
+    rewriter.setInsertionPoint(retOp);
+    auto newRetOperands = typeConverter->materializeTargetConversion(rewriter, retOp.getLoc(), newResultTypes, retOp.getOperands());
+    assert(newRetOperands.size() == retOp.getNumOperands() && "Failed to convert func::ReturnOp operands");
+    for (int i = 0; i < retOp.getNumOperands(); i++) {
+      retOp.setOperand(i, newRetOperands[i]);
+    }
 
     //===============================================================================================
     // 3. Replace oldFunc with newFunc
@@ -187,99 +374,31 @@ struct FuncOpConverter : public OpConversionPattern<func::FuncOp> {
 };
 
 
-// Step 3: AddOpConverter Conversion Pattern
-struct AddOpConverter : public OpConversionPattern<toy::AddOp> {
-  using OpConversionPattern<toy::AddOp>::OpConversionPattern;
+// Step 3: Op Conversion Patterns
+struct LinalgGenericOpConverter : public OpConversionPattern<linalg::GenericOp> {
+  using OpConversionPattern<linalg::GenericOp>::OpConversionPattern;
 
   LogicalResult matchAndRewrite(
-      toy::AddOp op, OpAdaptor adaptor,
+      linalg::GenericOp op, OpAdaptor adaptor,
       ConversionPatternRewriter &rewriter) const override {
-
-    auto parentOp = op->getParentOp();
-    LLVM_DEBUG(llvm::dbgs() << "\nBegin AddOpConverter:\n" << *parentOp << "\n\n");
-
-    auto xMemref = adaptor.getOperands()[0];
-    auto yMemref = adaptor.getOperands()[1];
-    auto size = adaptor.getOperands()[2];
-
-    auto userRange = op->getUsers();
-    SmallVector<mlir::Operation*> userOps(userRange.begin(), userRange.end());
-    if (userOps.size() != 1) {
-      llvm::errs() << "Failed to convert '" << op.getOperationName() << "' "
-                   << "because IR seems invalid!\n";
+    if (!op.hasPureTensorSemantics()) {
       return failure();
     }
 
-    Value outputMemref;
-    SmallVector<mlir::Operation*> rmOps;
-    if (auto storeOp = mlir::dyn_cast<mlir::toy::StoreOp>(*userOps.begin())) {
-      auto dstOperand = storeOp.getOperand(1);
-      if (auto castOp = dstOperand.getDefiningOp<mlir::UnrealizedConversionCastOp>()) {
-        if (mlir::dyn_cast<mlir::MemRefType>(castOp.getOperand(0).getType())) {
-          outputMemref = castOp.getOperand(0);
-          rmOps.push_back(storeOp);
-        }
-      }
-    }
-
-    if (!outputMemref) {
-      llvm::errs() << "Failed to convert '" << op.getOperationName() << "' "
-                   << "because IR seems invalid!\n";
-      return failure();
-    }
-
-    auto outputMemrefType = cast<MemRefType>(getTypeConverter()->convertType(op.getResult().getType()));
-    int64_t rank = outputMemrefType.getRank();
-
-    // // Indexing maps: identity for x and output, empty or identity for y.
-    // SmallVector<AffineExpr> exprs;
-    // for (int64_t i = 0; i < rank; ++i) {
-    //   exprs.push_back(rewriter.getAffineDimExpr(i));
-    // }
-    // auto xIndexMap = AffineMap::get(rank, 0, exprs, rewriter.getContext());
-    // auto yIndexMap = xIndexMap;
-    // auto outputIndexMap = xIndexMap;
-    // SmallVector<AffineMap> indexingMaps = {xIndexMap, yIndexMap, outputIndexMap};
-
-    // // Set iterator types: all parallel for element-wise operation.
-    // SmallVector<utils::IteratorType> iteratorTypes(rank, utils::IteratorType::parallel);
-
-    // // Create linalg.generic operation with memref semantics.
-    // auto linalgOp = rewriter.create<linalg::GenericOp>(
-    //   op.getLoc(),
-    //   /*resultTypes=*/TypeRange{}, // No tensor results; output is written to memref
-    //   /*inputs=*/ValueRange{xMemref, yMemref},
-    //   /*outputs=*/ValueRange{outputMemref},
-    //   /*indexingMaps=*/indexingMaps,
-    //   /*iteratorTypes=*/iteratorTypes,
-    //   [&](OpBuilder &nestedBuilder, Location loc, ValueRange args) {
-    //     Value xVal = args[0];
-    //     Value yVal = args[1];
-    //     Value result = nestedBuilder.create<arith::AddFOp>(loc, xVal, yVal);
-    //     nestedBuilder.create<linalg::YieldOp>(loc, result);
-    //   }
-    // );
-
-    // Using SCF dialect
-    auto c0 = rewriter.create<arith::ConstantOp>(op.getLoc(), rewriter.getIndexType(), rewriter.getIndexAttr(0));
-    auto c1 = rewriter.create<arith::ConstantOp>(op.getLoc(), rewriter.getIndexType(), rewriter.getIndexAttr(1));
-    auto ub = rewriter.create<arith::IndexCastOp>(op.getLoc(), rewriter.getIndexType(), size);
-    rewriter.create<scf::ParallelOp>(op.getLoc(), ValueRange{c0}, ValueRange{ub}, ValueRange{c1}, ValueRange{},
-      [&](OpBuilder &nestedBuilder, Location loc, ValueRange ivs, ValueRange values) {
-        Value idx = ivs[0];
-        Value xVal = nestedBuilder.create<memref::LoadOp>(loc, xMemref, ValueRange{idx});
-        Value yVal = nestedBuilder.create<memref::LoadOp>(loc, yMemref, ValueRange{idx});
-        Value result = nestedBuilder.create<arith::AddFOp>(loc, xVal, yVal);
-        nestedBuilder.create<memref::StoreOp>(loc, result, outputMemref, ValueRange{idx});
-      }
+    // Create linalg.generic operation with memref semantics.
+    auto newOp = rewriter.create<linalg::GenericOp>(
+      op.getLoc(),
+      /*resultTypes=*/TypeRange{},
+      /*inputs=*/adaptor.getInputs(),
+      /*outputs=*/adaptor.getOutputs(),
+      /*indexingMaps=*/op.getIndexingMapsAttr(),
+      /*iteratorTypes=*/op.getIteratorTypesAttr(),
+      op.getDocAttr(),
+      op.getLibraryCallAttr()
     );
 
-    rewriter.replaceOp(op, outputMemref);
-    for (auto op : rmOps) {
-      rewriter.eraseOp(op);
-    }
-
-    LLVM_DEBUG(llvm::dbgs() << "\nAfter AddOpConverter:\n" << *parentOp << "\n");
+    rewriter.cloneRegionBefore(op.getRegion(), newOp.getRegion(), newOp.getRegion().begin());
+    rewriter.replaceOp(op, adaptor.getOutputs());
 
     return success();
   }
@@ -289,6 +408,10 @@ struct AddOpConverter : public OpConversionPattern<toy::AddOp> {
 // Step 4: Define the Pass
 struct ConvertTensorToMemRefPass : public toy::impl::ConvertTensorToMemRefPassBase<ConvertTensorToMemRefPass> {
   static bool checkOpLegality(Operation* op) {
+    if (op->getDialect()->getNamespace() == tensor::TensorDialect::getDialectNamespace()) {
+      return false;
+    }
+
     if (op->getNumOperands() > 0) {
       for (const auto& opr : op->getOperands()) {
         if (isa<TensorType>(opr.getType())) {
@@ -325,6 +448,8 @@ struct ConvertTensorToMemRefPass : public toy::impl::ConvertTensorToMemRefPassBa
     target.addLegalDialect<BuiltinDialect>();
     target.addLegalDialect<memref::MemRefDialect>();
     target.addLegalDialect<arith::ArithDialect>();
+    target.addLegalDialect<linalg::LinalgDialect>();
+    target.addLegalDialect<tensor::TensorDialect>();
     target.addLegalDialect<toy::ToyDialect>();
 
     target.addDynamicallyLegalOp<func::FuncOp>([&](func::FuncOp op) {
@@ -352,22 +477,79 @@ struct ConvertTensorToMemRefPass : public toy::impl::ConvertTensorToMemRefPassBa
 
 
     //===========================================================================
-    // 2. Convert toy ops
+    // 2. Convert other ops
     //===========================================================================
-    // target.addLegalDialect<linalg::LinalgDialect>();
-    target.addLegalDialect<scf::SCFDialect>();
-    target.addIllegalDialect<toy::ToyDialect>();
+    ConversionTarget otherTarget(getContext());
+    otherTarget.addLegalDialect<BuiltinDialect>();
+    otherTarget.addLegalDialect<func::FuncDialect>();
+    otherTarget.addLegalDialect<arith::ArithDialect>();
+    otherTarget.addLegalDialect<linalg::LinalgDialect>();
+    otherTarget.addLegalDialect<memref::MemRefDialect>();
+
     for (auto& op : module.getBody()->getOperations()) {
       if (auto funcOp = dyn_cast<func::FuncOp>(&op)) {
         for (auto& innerOp : funcOp.getBody().front().getOperations()) {
-          target.addDynamicallyLegalOp(innerOp.getName(), checkOpLegality);
+          if (!isa<UnrealizedConversionCastOp>(innerOp)) {
+            otherTarget.addDynamicallyLegalOp(innerOp.getName(), checkOpLegality);
+          }
         }
       }
     }
 
     patterns.clear();
-    patterns.add<AddOpConverter>(typeConverter, &getContext());
-    if (failed(applyPartialConversion(module, target, std::move(patterns)))) {
+    patterns.add<LinalgGenericOpConverter>(typeConverter, &getContext());
+    if (failed(applyPartialConversion(module, otherTarget, std::move(patterns)))) {
+      signalPassFailure();
+    }
+  }
+};
+
+struct MemRefDimOpConverter : public OpConversionPattern<memref::DimOp> {
+  using OpConversionPattern<memref::DimOp>::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(
+      memref::DimOp op, OpAdaptor adaptor,
+      ConversionPatternRewriter &rewriter) const override {
+    auto src = op.getSource();
+    auto srcArgIdx = cast<BlockArgument>(src).getArgNumber();
+
+    auto funcOp = op->getParentOfType<func::FuncOp>();
+    auto attr = cast<mlir::IntegerAttr>(funcOp.getArgAttr(srcArgIdx, TOY_ARG_ATTR_NAME));
+    Value dimIntVal = funcOp.getArgument(attr.getInt());
+    Value dimIdxVal = rewriter.create<arith::IndexCastOp>(op.getLoc(), rewriter.getIndexType(), dimIntVal);
+    rewriter.replaceOp(op, dimIdxVal);
+    funcOp.removeArgAttrsAttr();
+
+    return success();
+  }
+};
+
+struct FoldMemRefDimOpPass : public toy::impl::FoldMemRefDimOpPassBase<FoldMemRefDimOpPass> {
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<func::FuncDialect>();
+    registry.insert<arith::ArithDialect>();
+    registry.insert<linalg::LinalgDialect>();
+    registry.insert<memref::MemRefDialect>();
+  }
+
+  void runOnOperation() override {
+    // Define the conversion target (arith dialect is legal)
+    ConversionTarget target(getContext());
+    target.addLegalDialect<BuiltinDialect>();
+    target.addLegalDialect<func::FuncDialect>();
+    target.addLegalDialect<arith::ArithDialect>();
+    target.addLegalDialect<linalg::LinalgDialect>();
+    target.addLegalDialect<memref::MemRefDialect>();
+    target.addLegalDialect<scf::SCFDialect>();
+
+    target.addIllegalOp<memref::DimOp>();
+
+    // Define the conversion patterns
+    RewritePatternSet patterns(&getContext());
+    patterns.add<MemRefDimOpConverter>(&getContext());
+
+    // Apply the conversion
+    if (failed(applyPartialConversion(getOperation(), target, std::move(patterns)))) {
       signalPassFailure();
     }
   }

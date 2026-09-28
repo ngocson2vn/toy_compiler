@@ -114,8 +114,9 @@ def Toy_StoreOp : Op<Toy_Dialect, "store"> {
     This operation store source tensor into destination tensor.
   }];
   let arguments = (ins F32Tensor:$src, F32Tensor:$dst);
+  let results = (outs F32Tensor:$result);
 
-  let assemblyFormat = "$src `,` $dst `:` type($src) `,` type($dst) attr-dict";
+  let assemblyFormat = "$src `,` $dst `:` type($src) `,` type($dst) attr-dict `->` type($result)";
 }
 
 def Toy_ReturnOp : Op<Toy_Dialect, "return", [HasParent<"FuncOp">, Terminator]> {

@@ -103,6 +103,8 @@ private:
                                      loc.col);
   }
 
+  mlir::Value funcRetVal;
+
   /// Declare a variable in the current scope, return success if the variable
   /// wasn't declared yet.
   mlir::LogicalResult declare(llvm::StringRef var, mlir::Value value) {
@@ -168,12 +170,14 @@ private:
       returnOp = dyn_cast<mlir::toy::ReturnOp>(entryBlock.back());
 
     if (!returnOp) {
-      builder.create<mlir::toy::ReturnOp>(loc(funcAST.getProto()->loc()));
-    } else if (returnOp.getOperands().size() > 0) {
+      returnOp = builder.create<mlir::toy::ReturnOp>(loc(funcAST.getProto()->loc()), funcRetVal);
+    }
+
+    if (returnOp.getOperands().size() > 0) {
       // Otherwise, if this return operation has an operand then add a result to
       // the function.
       function.setType(builder.getFunctionType(
-          function.getFunctionType().getInputs(), getType(VarType{})));
+          function.getFunctionType().getInputs(), returnOp.getInput().getType()));
     }
 
     return function;
@@ -209,6 +213,7 @@ private:
     int64_t size = -1;
     auto lhsType = cast<mlir::RankedTensorType>(lhs.getType());
     auto rhsType = cast<mlir::RankedTensorType>(rhs.getType());
+    assert(lhsType == rhsType && "argument types mismatch");
     if (lhsType.hasStaticShape() && rhsType.hasStaticShape()) {
       assert(lhsType.getNumElements() == rhsType.getNumElements() && "argument types mismatch");
       size = lhsType.getNumElements();
@@ -234,15 +239,17 @@ private:
     auto location = loc(ret.loc());
 
     // 'return' takes an optional expression, handle that case here.
-    mlir::Value expr = nullptr;
-    if (ret.getExpr().has_value()) {
-      if (!(expr = mlirGen(*ret.getExpr().value())))
-        return mlir::failure();
+    if (!ret.getExpr().has_value()) {
+      return mlir::failure();
     }
 
-    // Otherwise, this return operation has zero operands.
-    // builder.create<ReturnOp>(location, expr ? llvm::ArrayRef(expr)
-    //                                         : llvm::ArrayRef<mlir::Value>());
+    mlir::Value expr = mlirGen(*ret.getExpr().value());
+    if (!expr) {
+      return mlir::failure();
+    }
+
+    // Otherwise, create ReturnOp
+    builder.create<ReturnOp>(location, expr);
     return mlir::success();
   }
 
@@ -267,9 +274,9 @@ private:
 
     auto& dst = *cast<VariableExprAST>(expr.getDst());
     if (auto dstVal = symbolTable.lookup(dst.getName())) {
-      // auto dataType = cast<mlir::RankedTensorType>(dstVal.getType());
-      builder.create<mlir::toy::StoreOp>(loc(dst.loc()), srcVal, dstVal);
-      return dstVal;
+      auto dataType = cast<mlir::RankedTensorType>(dstVal.getType());
+      funcRetVal = builder.create<mlir::toy::StoreOp>(loc(dst.loc()), dataType, srcVal, dstVal);
+      return funcRetVal;
     }
 
     emitError(loc(expr.loc()), "error: unknown variable '")

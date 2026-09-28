@@ -1,4 +1,4 @@
-// MLIR IRs
+// MLIR Built-in IRs
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -6,12 +6,16 @@
 // MLIR Dialects
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 
 // MLIR Passes
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/Passes.h"
 
+// MLIR Support
 #include "mlir/Support/FileUtilities.h"
 #include "llvm/Support/ToolOutputFile.h"
 
@@ -61,14 +65,30 @@ LogicalResult lower(mlir::ModuleOp& module) {
   pm.addPass(mlir::createCanonicalizerPass());
   pm.addPass(mlir::createCSEPass());
 
+  // Toy to Linalg
+  pm.addPass(mlir::toy::createConvertToyToLinalgPass());
+  pm.addPass(mlir::createCanonicalizerPass());
+  pm.addPass(mlir::createCSEPass());
+
   // To MemRef
   pm.addPass(mlir::toy::createConvertTensorToMemRefPass());
   pm.addPass(mlir::createCanonicalizerPass());
   pm.addPass(mlir::createCSEPass());
 
+  // To Loops
+  pm.addPass(mlir::createConvertLinalgToParallelLoopsPass());
+  pm.addPass(mlir::createCanonicalizerPass());
+  pm.addPass(mlir::createCSEPass());
+
+  // Fold memref::DimOp
+  pm.addPass(mlir::toy::createFoldMemRefDimOpPass());
+  pm.addPass(mlir::createCanonicalizerPass());
+  pm.addPass(mlir::createCSEPass());
+
+
   // Apply the pass
   if (failed(pm.run(module))) {
-    llvm::errs() << "Pass execution failed\n";
+    llvm::errs() << "[middleend] passes execution failed\n";
     return failure();
   }
 
