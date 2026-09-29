@@ -93,7 +93,7 @@ std::optional<SmallVector<char, 0>> ModuleToObject::run() {
 The **nvvm dialect** operations translate directly into **LLVM NVPTX intrinsics**. For example,<br/>
 `nvvm.read.ptx.sreg.ctaid.x` is translated to `@llvm.nvvm.read.ptx.sreg.ctaid.x()`.
 
-Check [LLVMDialectModule_kernel.mlir](LLVMDialectModule_kernel.mlir)
+Check [LLVMDialectModule_kernel.llir](LLVMDialectModule_kernel.llir)
 <br/>
 
 ### 5. LLVM IR to PTX
