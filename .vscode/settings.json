@@ -130,6 +130,8 @@
     "sim_unordered_set": "cpp",
     "sim_vector": "cpp",
     "*.mlir": "mlir",
+    "*.llir": "mlir",
+    "*.ptx": "mlir",
     "*.def": "cpp",
     "*.td": "tablegen",
     "expected": "cpp",

@@ -5,6 +5,12 @@
 
 #include "common/status.h"
 
+namespace mlir {
+namespace gpu {
+class GPUModuleOp;
+}
+}
+
 namespace llvm {
 class Module;
 }
@@ -22,6 +28,8 @@ std::string readBinFile(const std::string& filePath);
 bool writeBinFile(const std::string& data, const std::string& filePath);
 
 status::Result<bool> runCommand(const std::string& cmd, std::string& stdoutOutput, std::string& stderrOutput);
+
+void dumpGPUModule(mlir::gpu::GPUModuleOp& gpuMod);
 
 void dumpLLVMIR(llvm::Module& llvmMod);
 

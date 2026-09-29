@@ -37,6 +37,7 @@ using namespace mlir;
 namespace mlir::toy {
 
 #define GEN_PASS_DEF_LOWERMEMREFTOLLVMPASS
+#define GEN_PASS_DEF_DUMPGPUMODULEPASS
 #define GEN_PASS_DEF_INJECTRUNTIMECTXPASS
 #define GEN_PASS_DEF_LOWERLLVMTOOBJECTPASS
 #include "backend/passes.h.inc"
@@ -236,6 +237,23 @@ class LowerMemRefToLLVMPass : public mlir::toy::impl::LowerMemRefToLLVMPassBase<
       signalPassFailure();
       LLVM_DEBUG(llvm::dbgs() << "\nRestored module:\n");
       LLVM_DEBUG(llvm::dbgs() << module << "\n");
+    }
+  }
+};
+
+class DumpGPUModulePass : public mlir::toy::impl::DumpGPUModulePassBase<DumpGPUModulePass> {
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<LLVM::LLVMDialect>();
+  }
+
+  void runOnOperation() override {
+    if (!::toy::utils::getBoolEnv("TOY_DUMP_LLVMIR")) {
+      return;
+    }
+
+    auto module = getOperation();
+    for (auto gpuMod : module.getOps<gpu::GPUModuleOp>()) {
+      ::toy::utils::dumpGPUModule(gpuMod);
     }
   }
 };
