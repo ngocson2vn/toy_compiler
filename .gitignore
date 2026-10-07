@@ -3,7 +3,6 @@ output/
 .vscode/vc.*
 .git_submodule_updated
 .llvm.build.done
-*.ptx
 *.cubin
 *.mlir
 *.o

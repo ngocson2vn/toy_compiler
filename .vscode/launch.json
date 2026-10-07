@@ -12,7 +12,7 @@
         "console": "integratedTerminal",
         "program": "${workspaceFolder}/build/compiler",
         "args": [
-            "./add_two_vectors.toy",
+            "./add_max_vectors.toy",
             "sm_86"
         ]
     }

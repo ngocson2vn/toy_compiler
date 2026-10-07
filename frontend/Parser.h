@@ -215,13 +215,16 @@ private:
         return parseError<ExprAST>("<single arg>", "as argument to print()");
 
       return std::make_unique<PrintExprAST>(std::move(loc), std::move(args[0]));
-    }
-
-    if (name == "add") {
-      if (args.size() != 3)
-        return parseError<ExprAST>("<3 args>", "as arguments to add()");
+    } else if (name == "add") {
+      if (args.size() != 2)
+        return parseError<ExprAST>("<2 args>", "as arguments to add()");
       
       return std::make_unique<AddExprAST>(std::move(loc), std::move(args));
+    } else if (name == "max") {
+      if (args.size() != 2)
+        return parseError<ExprAST>("<2 args>", "as arguments to max()");
+      
+      return std::make_unique<MaxExprAST>(std::move(loc), std::move(args));
     }
 
     // Call to a user-defined function
@@ -303,6 +306,30 @@ private:
     return parseBinOpRHS(0, std::move(lhs));
   }
 
+  std::vector<std::string> split(const std::string& str, const std::string& delimiter) {
+    std::vector<std::string> ret_vec;
+    std::size_t slen = str.size();
+    std::size_t dlen = delimiter.size();
+    std::size_t spos = 0;
+    auto cpos = str.find(delimiter, spos);
+    while (cpos != std::string::npos) {
+      auto len = cpos - spos;
+      if (len > 0) {
+        ret_vec.push_back(str.substr(spos, len));
+      }
+
+      spos = cpos + dlen;
+      cpos = str.find(delimiter, spos);
+    }
+
+    auto len = slen - spos;
+    if (len > 0) {
+      ret_vec.push_back(str.substr(spos, len));
+    }
+
+    return ret_vec;
+  }
+
   /// type ::= < shape_list >
   /// shape_list ::= num | num , shape_list
   std::unique_ptr<VarType> parseType() {
@@ -312,9 +339,9 @@ private:
     auto type = std::make_unique<VarType>();
     auto id = lexer.getId();
     if (id == "tensor") {
-      type->type = Type::tensor;
+      type->type = Type::TENSOR;
     } else if (id == "int") {
-      type->type = Type::integer;
+      type->type = Type::I32;
     } else {
       return parseError<VarType>("type identifier", "tensor or int");
     }
@@ -326,11 +353,38 @@ private:
 
     lexer.getNextToken(); // eat <
 
-    while (lexer.getCurToken() == tok_number) {
-      type->shape.push_back(lexer.getValue());
+    while (lexer.getCurToken() == tok_number || lexer.getCurToken() == tok_identifier) {
+      if (lexer.getCurToken() == tok_number) {
+        type->shape.push_back(lexer.getValue());
+      } else if (lexer.getCurToken() == tok_identifier) {
+        auto dim_vec = split(lexer.getId().str(), "x");
+        if (dim_vec.empty()) {
+          return parseError<VarType>("an identifier", "to be a dynamic dim size");
+        }
+
+        for (int i = 0; i < dim_vec.size() - 1; i++) {
+          const auto& dim = dim_vec[i];
+          if (isdigit(dim[0])) {
+            auto numVal = strtod(dim.c_str(), nullptr);
+            type->shape.push_back(numVal);
+          } else {
+            type->shape.push_back(dim);
+          }
+        }
+
+        const auto& elem_type_name = dim_vec.back();
+        if (elem_type_name == type::name::F32) {
+          type->element_type = Type::F32;
+        } else if (elem_type_name == type::name::F16) {
+          type->element_type = Type::F16;
+        } else if (elem_type_name == type::name::I32) {
+          type->element_type = Type::I32;
+        } else {
+          return parseError<VarType>("<f32|f16|i32>", "to be element type name");
+        }
+      }
+
       lexer.getNextToken();
-      if (lexer.getCurToken() == ',')
-        lexer.getNextToken();
     }
 
     if (lexer.getCurToken() != '>')

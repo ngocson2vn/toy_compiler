@@ -45,6 +45,7 @@ private:
   void dump(ReturnExprAST *node);
   void dump(AssignExprAST *node);
   void dump(AddExprAST *node);
+  void dump(MaxExprAST *node);
   void dump(BinaryExprAST *node);
   void dump(CallExprAST *node);
   void dump(PrintExprAST *node);
@@ -78,14 +79,24 @@ static std::string loc(T *node) {
 /// Dispatch to a generic expressions to the appropriate subclass using RTTI
 void ASTDumper::dump(ExprAST *expr) {
   llvm::TypeSwitch<ExprAST *>(expr)
-      .Case<BinaryExprAST, AssignExprAST, CallExprAST, LiteralExprAST, NumberExprAST,
-            AddExprAST, PrintExprAST, ReturnExprAST, VarDeclExprAST, VariableExprAST>(
-          [&](auto *node) { this->dump(node); })
-      .Default([&](ExprAST *) {
-        // No match, fallback to a generic message
-        INDENT();
-        llvm::errs() << "<unknown Expr, kind " << expr->getKind() << ">\n";
-      });
+    .Case<
+      BinaryExprAST,
+      AssignExprAST,
+      CallExprAST,
+      LiteralExprAST,
+      NumberExprAST,
+      AddExprAST,
+      MaxExprAST,
+      PrintExprAST,
+      ReturnExprAST,
+      VarDeclExprAST,
+      VariableExprAST
+    >([&](auto *node) { this->dump(node); })
+    .Default([&](ExprAST *) {
+      // No match, fallback to a generic message
+      INDENT();
+      llvm::errs() << "<unknown Expr, kind " << expr->getKind() << ">\n";
+    });
 }
 
 /// A variable declaration is printing the variable name, the type, and then
@@ -180,10 +191,21 @@ void ASTDumper::dump(AssignExprAST *node) {
   dump(node->getSrc());
 }
 
-/// Print an assign operation, first destination, then recurse into source.
+/// Print an add operation, operand1, operand2
 void ASTDumper::dump(AddExprAST *node) {
   INDENT();
   llvm::errs() << "Add [ " << loc(node) << "\n";
+  for (auto& arg : node->getArgs()) {
+    dump(arg.get());
+  }
+  indent();
+  llvm::errs() << "]\n";
+}
+
+/// Print an max operation, operand1, operand2
+void ASTDumper::dump(MaxExprAST *node) {
+  INDENT();
+  llvm::errs() << "Max [ " << loc(node) << "\n";
   for (auto& arg : node->getArgs()) {
     dump(arg.get());
   }

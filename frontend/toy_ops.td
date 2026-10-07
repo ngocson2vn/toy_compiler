@@ -90,22 +90,60 @@ def Toy_FuncOp : Op<Toy_Dialect, "func", [
 //   ];
 // }
 
+def Toy_TieDimsOp : Op<Toy_Dialect, "tie_dims"> {
+  let summary = "Tie dims operation for the toy dialect";
+  let description = [{
+    This operation tie dims with a tensor.
+  }];
+  let arguments = (ins AnyTypeOf<[F32Tensor, AnyMemRef]>:$target, Variadic<Index>:$dims);
+  let results = (outs AnyTypeOf<[F32Tensor, AnyMemRef]>:$result);
+
+  let assemblyFormat = "$target `,` $dims `:` type($target) `,` type($dims) attr-dict `->` type($result)";
+
+  // let builders = [
+  //   // OpBuilder<(ins "Value":$lhs, "Value":$rhs, "int64_t":$size)>,
+  //   OpBuilder<(ins "Value":$lhs, "ValueRange":$dynamic_dims), [{
+  //     build($_builder, $_state, lhs, dynamic_dims);
+  //   }]>,
+  // ];
+
+  let hasCanonicalizer = 1;
+}
+
 def Toy_AddOp : Op<Toy_Dialect, "add"> {
   let summary = "Addition operation for the toy dialect";
   let description = [{
     This operation computes the sum of two tensors element-wise.
   }];
-  let arguments = (ins F32Tensor:$lhs, F32Tensor:$rhs, I64:$size);
+  let arguments = (ins F32Tensor:$lhs, F32Tensor:$rhs);
   let results = (outs F32Tensor:$result);
 
-  let assemblyFormat = "$lhs `,` $rhs `,` $size `:` type($lhs) `,` type($rhs) `,` type($size) attr-dict `->` type($result)";
+  let assemblyFormat = "$lhs `,` $rhs `:` type($lhs) `,` type($rhs) attr-dict `->` type($result)";
 
-  let builders = [
-    // OpBuilder<(ins "Value":$lhs, "Value":$rhs, "int64_t":$size)>,
-    OpBuilder<(ins "Value":$lhs, "Value":$rhs, "int64_t":$size), [{
-      build($_builder, $_state, lhs, rhs, size);
-    }]>,
-  ];
+  // let builders = [
+  //   // OpBuilder<(ins "Value":$lhs, "Value":$rhs, "int64_t":$size)>,
+  //   OpBuilder<(ins "Value":$lhs, "Value":$rhs), [{
+  //     build($_builder, $_state, lhs, rhs);
+  //   }]>,
+  // ];
+}
+
+def Toy_MaxOp : Op<Toy_Dialect, "max"> {
+  let summary = "Maximum operation for the toy dialect";
+  let description = [{
+    This operation computes the maximum of two tensors element-wise.
+  }];
+  let arguments = (ins F32Tensor:$lhs, AnyTypeOf<[F32Tensor, F32]>:$rhs);
+  let results = (outs F32Tensor:$result);
+
+  let assemblyFormat = "$lhs `,` $rhs `:` type($lhs) `,` type($rhs) attr-dict `->` type($result)";
+
+  // let builders = [
+  //   // OpBuilder<(ins "Value":$lhs, "Value":$rhs, "int64_t":$size)>,
+  //   OpBuilder<(ins "Value":$lhs, "Value":$rhs), [{
+  //     build($_builder, $_state, lhs, rhs);
+  //   }]>,
+  // ];
 }
 
 def Toy_StoreOp : Op<Toy_Dialect, "store"> {

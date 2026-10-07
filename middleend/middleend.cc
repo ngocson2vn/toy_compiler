@@ -4,12 +4,18 @@
 #include "mlir/IR/BuiltinTypes.h"
 
 // MLIR Dialects
+#include "mlir/InitAllDialects.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Tensor/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/Dialect/Linalg/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
+#include "mlir/Dialect/Bufferization/Transforms/FuncBufferizableOpInterfaceImpl.h"
 
 // MLIR Passes
 #include "mlir/Pass/PassManager.h"
@@ -32,6 +38,22 @@ namespace middleend {
 
 LogicalResult lower(mlir::ModuleOp& module) {
   auto& context = *module.getContext();
+
+  DialectRegistry registry;
+  registry.insert<mlir::toy::ToyDialect>();
+  registry.insert<func::FuncDialect>();
+  registry.insert<arith::ArithDialect>();
+  registry.insert<linalg::LinalgDialect>();
+  registry.insert<bufferization::BufferizationDialect>();
+
+  mlir::toy::registerBufferizableOpInterfaceExternalModels(registry);
+  arith::registerBufferizableOpInterfaceExternalModels(registry);
+  linalg::registerBufferizableOpInterfaceExternalModels(registry);
+  tensor::registerBufferizableOpInterfaceExternalModels(registry);
+  bufferization::func_ext::registerBufferizableOpInterfaceExternalModels(registry);
+
+  context.appendDialectRegistry(registry);
+  context.loadAllAvailableDialects();
 
   // Set up the pass manager
   context.disableMultithreading();
@@ -70,6 +92,17 @@ LogicalResult lower(mlir::ModuleOp& module) {
   pm.addPass(mlir::createCanonicalizerPass());
   pm.addPass(mlir::createCSEPass());
 
+  // Producer-Consumer Fusion
+  pm.addPass(mlir::createLinalgElementwiseOpFusionPass());
+  pm.addPass(mlir::createCanonicalizerPass());
+  pm.addPass(mlir::createCSEPass());
+
+  // Fold empty tensors
+  pm.addPass(mlir::bufferization::createEmptyTensorEliminationPass());
+  pm.addPass(mlir::toy::createFoldMaterializeInDestinationOpPass());
+  pm.addPass(mlir::createCanonicalizerPass());
+  pm.addPass(mlir::createCSEPass());
+
   // To MemRef
   pm.addPass(mlir::toy::createConvertTensorToMemRefPass());
   pm.addPass(mlir::createCanonicalizerPass());
@@ -80,11 +113,10 @@ LogicalResult lower(mlir::ModuleOp& module) {
   pm.addPass(mlir::createCanonicalizerPass());
   pm.addPass(mlir::createCSEPass());
 
-  // Fold memref::DimOp
-  pm.addPass(mlir::toy::createFoldMemRefDimOpPass());
+  // Fold toy::TieDimsOp ops
+  pm.addPass(mlir::toy::createFoldTieDimsOpPass());
   pm.addPass(mlir::createCanonicalizerPass());
   pm.addPass(mlir::createCSEPass());
-
 
   // Apply the pass
   if (failed(pm.run(module))) {

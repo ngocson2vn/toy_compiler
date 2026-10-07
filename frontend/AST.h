@@ -20,6 +20,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/raw_ostream.h"
 #include <utility>
 #include <vector>
 
@@ -28,14 +29,91 @@ namespace compiler {
 namespace frontend {
 
 enum class Type {
-  tensor = 1,
-  integer = 2,
+  TENSOR = 1,
+  I32 = 2,
+  F32 = 3,
+  F16 = 4
+};
+
+namespace type::name {
+  static const std::string F32 = "f32";
+  static const std::string F16 = "f16";
+  static const std::string I32 = "i32";
+}
+
+class ShapeValue {
+ public:
+  ShapeValue(uint64_t val)
+    : val_(val), static_(true) {}
+
+  ShapeValue(const std::string& id)
+    : id_(id), static_(false) {}
+
+  bool isStatic() const {
+    return static_;
+  }
+
+  bool isDynamic() const {
+    return (not static_);
+  }
+
+  uint64_t getValue() const {
+    return val_;
+  }
+
+  llvm::StringRef getId() const {
+    return id_;
+  }
+
+  friend llvm::raw_ostream& operator<<(llvm::raw_ostream& os, const ShapeValue& v) {
+    if (v.isStatic()) {
+      os << v.getValue();
+    } else {
+      os << v.getId();
+    }
+
+    return os;
+  }
+
+ private:
+  uint64_t val_ = -1;
+  std::string id_;
+  bool static_;
 };
 
 /// A variable type with shape information.
 struct VarType {
   Type type;
-  std::vector<int64_t> shape;
+  Type element_type;
+  std::vector<ShapeValue> shape;
+
+  bool isTensor() const {
+    return type == Type::TENSOR;
+  }
+
+  bool hasStaticShape() const {
+    if (type == Type::TENSOR) {
+      for (const auto& d : shape) {
+        if (!d.isStatic()) {
+          return false;
+        }
+      }
+    }
+
+    return true;
+  }
+
+  bool hasDynamicDim() const {
+    if (type == Type::TENSOR) {
+      for (const auto& d : shape) {
+        if (!d.isStatic()) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
 };
 
 /// Base class for all expression nodes.
@@ -50,6 +128,7 @@ public:
     Expr_AssignOp,
     Expr_BinOp,
     Expr_Add,
+    Expr_Max,
     Expr_Print,
     Expr_Call,
   };
@@ -225,7 +304,7 @@ public:
   static bool classof(const ExprAST *c) { return c->getKind() == Expr_Print; }
 };
 
-/// Expression class for builtin print calls.
+/// Expression class for builtin add calls.
 class AddExprAST : public ExprAST {
   std::vector<std::unique_ptr<ExprAST>> args;
 
@@ -237,6 +316,20 @@ public:
 
   /// LLVM style RTTI
   static bool classof(const ExprAST *c) { return c->getKind() == Expr_Add; }
+};
+
+/// Expression class for builtin max calls.
+class MaxExprAST : public ExprAST {
+  std::vector<std::unique_ptr<ExprAST>> args;
+
+public:
+  MaxExprAST(Location loc, std::vector<std::unique_ptr<ExprAST>> args)
+      : ExprAST(Expr_Max, std::move(loc)), args(std::move(args)) {}
+
+  std::vector<std::unique_ptr<ExprAST>>& getArgs() { return args; }
+
+  /// LLVM style RTTI
+  static bool classof(const ExprAST *c) { return c->getKind() == Expr_Max; }
 };
 
 /// This class represents the "prototype" for a function, which captures its

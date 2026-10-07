@@ -17,7 +17,9 @@ rm -fv ${OBJECT_FILE}
 # - arg0: the path to a .toy source file
 # - arg1: the sm architecture
 # ./output/bin/compiler -debug ./add_two_vectors.toy sm_86
-./output/bin/compiler ./add_two_vectors.toy sm_86
+# ./output/bin/compiler ./add_two_vectors.toy sm_86
+
+./output/bin/compiler ./add_max_vectors.toy sm_86
 
 # Generate a shared object file from the generated object file
 if [ -f ${OBJECT_FILE} ]; then

@@ -1,0 +1,4 @@
+def add_max_vectors(a: tensor<d0xd1xf32>, b: tensor<d0xd1xf32>, out: tensor<d0xd1xf32>, d0: int, d1: int) {
+  var tmp0 = add(a, b);
+  out = max(tmp0, 0);
+}

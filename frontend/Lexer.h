@@ -50,6 +50,14 @@ enum Token : int {
   // primary
   tok_identifier = -5,
   tok_number = -6,
+
+  // integer element types
+  tok_i32 = -10,
+
+  // float element types
+  tok_f32 = -20,
+  tok_f16 = -21,
+  tok_bf16 = -22,
 };
 
 /// The Lexer is an abstract base class providing all the facilities that the
@@ -144,10 +152,17 @@ private:
 
       if (identifierStr == "return")
         return tok_return;
-      if (identifierStr == "def")
+      else if (identifierStr == "def")
         return tok_def;
-      if (identifierStr == "var")
+      else if (identifierStr == "var")
         return tok_var;
+      else if (identifierStr == "f32")
+        return tok_f32;
+      else if (identifierStr == "f16")
+        return tok_f16;
+      else if (identifierStr == "i32")
+        return tok_i32;
+
       return tok_identifier;
     }
 

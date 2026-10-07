@@ -21,6 +21,24 @@ def ConvertToyToLinalgPass: Pass<"convert-toy-to-linalg", "mlir::ModuleOp"> {
                              "mlir::toy::ToyDialect"];
 }
 
+def FoldTieDimsOpPass: Pass<"fold-ties-dims-op", "mlir::ModuleOp"> {
+    let summary = "Fold toy::TieDimsOp ops";
+    let description = [{
+      This pass folds toy::TieDimsOp ops.
+    }];
+
+    let dependentDialects = ["mlir::toy::ToyDialect"];
+}
+
+def FoldMaterializeInDestinationOpPass: Pass<"fold-materialize-in-destination-op", "mlir::ModuleOp"> {
+    let summary = "Fold bufferization::MaterializeInDestinationOp ops";
+    let description = [{
+      This pass folds bufferization::MaterializeInDestinationOp ops.
+    }];
+
+    let dependentDialects = ["mlir::bufferization::BufferizationDialect"];
+}
+
 def ConvertTensorToMemRefPass: Pass<"convert-tensor-to-memref", "mlir::ModuleOp"> {
     let summary = "Convert Tensor to MemRef";
     let description = [{
@@ -30,11 +48,3 @@ def ConvertTensorToMemRefPass: Pass<"convert-tensor-to-memref", "mlir::ModuleOp"
     let dependentDialects = ["mlir::arith::ArithDialect"];
 }
 
-def FoldMemRefDimOpPass: Pass<"fold-memref-dimop", "mlir::ModuleOp"> {
-    let summary = "Fold memref::DimOp ops";
-    let description = [{
-      This pass folds memref::DimOp ops.
-    }];
-
-    let dependentDialects = ["mlir::memref::MemRefDialect"];
-}

@@ -6,6 +6,7 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/SymbolTable.h"
+#include "mlir/IR/PatternMatch.h"
 // #include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Support/TypeID.h"
@@ -15,3 +16,11 @@
 
 #define GET_OP_CLASSES
 #include "frontend/toy_ops.h.inc"
+
+namespace mlir {
+namespace toy {
+
+void registerBufferizableOpInterfaceExternalModels(DialectRegistry &registry);
+
+}
+}
