@@ -46,6 +46,7 @@ private:
   void dump(AssignExprAST *node);
   void dump(AddExprAST *node);
   void dump(MaxExprAST *node);
+  void dump(RandomExprAST *node);
   void dump(BinaryExprAST *node);
   void dump(CallExprAST *node);
   void dump(PrintExprAST *node);
@@ -87,6 +88,7 @@ void ASTDumper::dump(ExprAST *expr) {
       NumberExprAST,
       AddExprAST,
       MaxExprAST,
+      RandomExprAST,
       PrintExprAST,
       ReturnExprAST,
       VarDeclExprAST,
@@ -106,7 +108,10 @@ void ASTDumper::dump(VarDeclExprAST *varDecl) {
   llvm::errs() << "VarDecl " << varDecl->getName();
   dump(varDecl->getType());
   llvm::errs() << " " << loc(varDecl) << "\n";
-  dump(varDecl->getInitVal());
+
+  if (!!varDecl->getInitVal()) {
+    dump(varDecl->getInitVal());
+  }
 }
 
 /// A "block", or a list of expression
@@ -213,6 +218,17 @@ void ASTDumper::dump(MaxExprAST *node) {
   llvm::errs() << "]\n";
 }
 
+/// Print an random operation, arg0
+void ASTDumper::dump(RandomExprAST *node) {
+  INDENT();
+  llvm::errs() << "Random [ " << loc(node) << "\n";
+  for (auto& arg : node->getArgs()) {
+    dump(arg.get());
+  }
+  indent();
+  llvm::errs() << "]\n";
+}
+
 /// Print a call expression, first the callee name and the list of args by
 /// recursing into each individual argument.
 void ASTDumper::dump(CallExprAST *node) {
@@ -235,9 +251,29 @@ void ASTDumper::dump(PrintExprAST *node) {
 
 /// Print type: only the shape is printed in between '<' and '>'
 void ASTDumper::dump(const VarType &type) {
-  llvm::errs() << "<";
-  llvm::interleaveComma(type.shape, llvm::errs());
-  llvm::errs() << ">";
+  llvm::errs() << " : " << type.getTypeName();
+  if (!type.shape.empty()) {
+    const auto& shape = type.shape;
+    const auto& d0 = shape[0];
+    llvm::errs() << "<";
+    if (d0.isStatic()) {
+      llvm::errs() << d0.getValue();
+    } else {
+      llvm::errs() << d0.getId();
+    }
+
+    for (int i = 1; i < shape.size(); i++) {
+      const auto& d = shape[i];
+      if (d.isStatic()) {
+        llvm::errs() << "x" << d.getValue();
+      } else {
+        llvm::errs() << "x" << d.getId();
+      }
+    }
+
+    llvm::errs() << "x" << type.getElemTypeName();
+    llvm::errs() << ">";
+  }
 }
 
 /// Print a function prototype, first the function name, and then the list of

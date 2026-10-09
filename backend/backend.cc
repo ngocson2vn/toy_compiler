@@ -53,20 +53,31 @@ namespace backend {
 
 // Initialize
 static bool __initialized = []() -> bool {
-  static std::once_flag init_flag;
-  std::call_once(init_flag, []() {
-    
-    llvm::InitializeAllTargetInfos();
-    llvm::InitializeAllTargets();
-    llvm::InitializeAllTargetMCs();
-    llvm::InitializeAllAsmParsers();
-    llvm::InitializeAllAsmPrinters();
-  });
+  // static std::once_flag init_flag;
+  // std::call_once(init_flag, []() {
+  //   llvm::LLVMInitializeX86TargetInfo();
+  //   llvm::InitializeAllTargets();
+  //   llvm::InitializeAllTargetMCs();
+  //   llvm::InitializeAllAsmParsers();
+  //   llvm::InitializeAllAsmPrinters();
+  // });
 
   static llvm::codegen::RegisterCodeGenFlags CGF;
 
   return true;
 }();
+
+static void registerRequiredExtensions(DialectRegistry& registry) {
+  mlir::registerConvertMemRefToLLVMInterface(registry);
+  mlir::registerConvertFuncToLLVMInterface(registry);
+  mlir::registerBuiltinDialectTranslation(registry);
+  mlir::registerGPUDialectTranslation(registry);
+  mlir::registerNVVMDialectTranslation(registry);
+  mlir::registerLLVMDialectTranslation(registry);
+  mlir::registerConvertNVVMToLLVMInterface(registry);
+  mlir::NVVM::registerNVVMTargetInterfaceExternalModels(registry);
+  mlir::gpu::registerOffloadingLLVMTranslationInterfaceExternalModels(registry);
+}
 
 llvm::LogicalResult lower(ModuleOp& module, const std::string& targetArch) {
   auto& context = *module.getContext();
@@ -132,15 +143,7 @@ llvm::LogicalResult lower(ModuleOp& module, const std::string& targetArch) {
   //============================================================================
   // Register LLVM translation interfaces
   DialectRegistry registry;
-  mlir::registerAllExtensions(registry);
-  mlir::registerConvertMemRefToLLVMInterface(registry);
-  mlir::registerConvertFuncToLLVMInterface(registry);
-  mlir::registerBuiltinDialectTranslation(registry);
-  mlir::registerGPUDialectTranslation(registry);
-  mlir::registerNVVMDialectTranslation(registry);
-  mlir::registerLLVMDialectTranslation(registry);
-  mlir::NVVM::registerNVVMTargetInterfaceExternalModels(registry);
-  mlir::gpu::registerOffloadingLLVMTranslationInterfaceExternalModels(registry);
+  registerRequiredExtensions(registry);
   context.appendDialectRegistry(registry);
 
   // Lower SCF -> CF

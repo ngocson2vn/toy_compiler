@@ -24,6 +24,8 @@
 #include <map>
 #include <utility>
 #include <vector>
+#include <unordered_map>
+#include <functional>
 
 namespace toy {
 namespace compiler {
@@ -37,7 +39,39 @@ namespace frontend {
 class Parser {
 public:
   /// Create a Parser for the supplied lexer.
-  Parser(Lexer &lexer) : lexer(lexer) {}
+  Parser(Lexer &lexer) : lexer(lexer) {
+    opFunctions["print"] = [this](Location& loc, std::vector<std::unique_ptr<ExprAST>>& args) 
+                              -> std::unique_ptr<ExprAST> {
+      if (args.size() != 1)
+        return parseError<ExprAST>("<single arg>", "as argument to print()");
+
+      return std::make_unique<PrintExprAST>(std::move(loc), std::move(args[0]));
+    };
+
+    opFunctions["add"] = [this](Location& loc, std::vector<std::unique_ptr<ExprAST>>& args) 
+                              -> std::unique_ptr<ExprAST> {
+      if (args.size() != 2)
+        return parseError<ExprAST>("<2 args>", "as arguments to add()");
+
+      return std::make_unique<AddExprAST>(std::move(loc), std::move(args));
+    };
+
+    opFunctions["max"] = [this](Location& loc, std::vector<std::unique_ptr<ExprAST>>& args) 
+                              -> std::unique_ptr<ExprAST> {
+      if (args.size() != 2)
+        return parseError<ExprAST>("<2 args>", "as arguments to max()");
+      
+      return std::make_unique<MaxExprAST>(std::move(loc), std::move(args));
+    };
+
+    opFunctions["random"] = [this](Location& loc, std::vector<std::unique_ptr<ExprAST>>& args) 
+                              -> std::unique_ptr<ExprAST> {
+      if (args.size() != 1)
+        return parseError<ExprAST>("<1 args>", "as arguments to random()");
+      
+      return std::make_unique<RandomExprAST>(std::move(loc), std::move(args));
+    };
+  }
 
   /// Parse a full Module. A module is a list of function definitions.
   std::unique_ptr<ModuleAST> parseModule() {
@@ -59,6 +93,8 @@ public:
 
 private:
   Lexer &lexer;
+  using OpFn = std::function<std::unique_ptr<ExprAST>(Location&, std::vector<std::unique_ptr<ExprAST>>&)>;
+  std::unordered_map<std::string, OpFn> opFunctions;
 
   /// Parse a return statement.
   /// return :== return ; | return expr ;
@@ -80,8 +116,10 @@ private:
   /// numberexpr ::= number
   std::unique_ptr<ExprAST> parseNumberExpr() {
     auto loc = lexer.getLastLocation();
+    Type type = Type::F32;
+
     auto result =
-        std::make_unique<NumberExprAST>(std::move(loc), lexer.getValue());
+        std::make_unique<NumberExprAST>(std::move(loc), type, lexer.getValue());
     lexer.consume(tok_number);
     return std::move(result);
   }
@@ -210,21 +248,8 @@ private:
     lexer.consume(Token(')'));
 
     // It can be a builtin call to print
-    if (name == "print") {
-      if (args.size() != 1)
-        return parseError<ExprAST>("<single arg>", "as argument to print()");
-
-      return std::make_unique<PrintExprAST>(std::move(loc), std::move(args[0]));
-    } else if (name == "add") {
-      if (args.size() != 2)
-        return parseError<ExprAST>("<2 args>", "as arguments to add()");
-      
-      return std::make_unique<AddExprAST>(std::move(loc), std::move(args));
-    } else if (name == "max") {
-      if (args.size() != 2)
-        return parseError<ExprAST>("<2 args>", "as arguments to max()");
-      
-      return std::make_unique<MaxExprAST>(std::move(loc), std::move(args));
+    if (opFunctions.count(name)) {
+      return opFunctions[name](loc, args);
     }
 
     // Call to a user-defined function
@@ -410,7 +435,8 @@ private:
     lexer.getNextToken(); // eat id
 
     std::unique_ptr<VarType> type; // Type is optional, it can be inferred
-    if (lexer.getCurToken() == '<') {
+    if (lexer.getCurToken() == ':') {
+      lexer.getNextToken(); // eat :
       type = parseType();
       if (!type)
         return nullptr;
@@ -418,8 +444,13 @@ private:
 
     if (!type)
       type = std::make_unique<VarType>();
-    lexer.consume(Token('='));
-    auto expr = parseExpression();
+    
+    std::unique_ptr<ExprAST> expr;
+    if (lexer.getCurToken() == '=') {
+      lexer.consume(Token('='));
+      expr = parseExpression();
+    }
+
     return std::make_unique<VarDeclExprAST>(std::move(loc), std::move(id),
                                             std::move(*type), std::move(expr));
   }

@@ -32,13 +32,16 @@ enum class Type {
   TENSOR = 1,
   I32 = 2,
   F32 = 3,
-  F16 = 4
+  F16 = 4,
+  INVALID = 99
 };
 
 namespace type::name {
   static const std::string F32 = "f32";
   static const std::string F16 = "f16";
   static const std::string I32 = "i32";
+  static const std::string TENSOR = "tensor";
+  static const std::string INVALID = "invalid";
 }
 
 class ShapeValue {
@@ -87,6 +90,30 @@ struct VarType {
   Type element_type;
   std::vector<ShapeValue> shape;
 
+  llvm::StringRef getTypeStr(const Type& type) const {
+    switch (type) {
+      case Type::F32:
+        return type::name::F32;
+      case Type::F16:
+        return type::name::F16;
+      case Type::I32:
+        return type::name::I32;
+      case Type::TENSOR:
+        return type::name::TENSOR;
+
+      default:
+        return type::name::INVALID;
+    }
+  }
+
+  llvm::StringRef getTypeName() const {
+    return getTypeStr(type);
+  }
+
+  llvm::StringRef getElemTypeName() const {
+    return getTypeStr(element_type);
+  }
+
   bool isTensor() const {
     return type == Type::TENSOR;
   }
@@ -129,8 +156,9 @@ public:
     Expr_BinOp,
     Expr_Add,
     Expr_Max,
-    Expr_Print,
+    Expr_Random,
     Expr_Call,
+    Expr_Print
   };
 
   ExprAST(ExprASTKind kind, Location location)
@@ -152,12 +180,16 @@ using ExprASTList = std::vector<std::unique_ptr<ExprAST>>;
 /// Expression class for numeric literals like "1.0".
 class NumberExprAST : public ExprAST {
   double val;
+  Type type;
 
 public:
-  NumberExprAST(Location loc, double val)
-      : ExprAST(Expr_Num, std::move(loc)), val(val) {}
+  NumberExprAST(Location loc, Type type, double val)
+      : ExprAST(Expr_Num, std::move(loc)), type(type), val(val) {}
 
   double getValue() { return val; }
+
+  Type getType() { return type; }
+  void setType(Type ty) { type = ty; }
 
   /// LLVM style RTTI
   static bool classof(const ExprAST *c) { return c->getKind() == Expr_Num; }
@@ -330,6 +362,20 @@ public:
 
   /// LLVM style RTTI
   static bool classof(const ExprAST *c) { return c->getKind() == Expr_Max; }
+};
+
+/// Expression class for builtin random calls.
+class RandomExprAST : public ExprAST {
+  std::vector<std::unique_ptr<ExprAST>> args;
+
+public:
+  RandomExprAST(Location loc, std::vector<std::unique_ptr<ExprAST>> args)
+      : ExprAST(Expr_Random, std::move(loc)), args(std::move(args)) {}
+
+  std::vector<std::unique_ptr<ExprAST>>& getArgs() { return args; }
+
+  /// LLVM style RTTI
+  static bool classof(const ExprAST *c) { return c->getKind() == Expr_Random; }
 };
 
 /// This class represents the "prototype" for a function, which captures its

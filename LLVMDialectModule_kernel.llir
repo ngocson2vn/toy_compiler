@@ -4,39 +4,29 @@ target datalayout = "e-p6:32:32-i64:64-i128:128-i256:256-v16:16-v32:32-n16:32:64
 target triple = "nvptx64-nvidia-cuda"
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
-define ptx_kernel void @add_max_vectors_kernel(i64 %0, i64 %1, ptr readonly captures(none) %2, ptr readonly captures(none) %3, ptr writeonly captures(none) %4) local_unnamed_addr #0 {
-  %6 = tail call i32 @llvm.nvvm.read.ptx.sreg.ctaid.x()
-  %7 = zext nneg i32 %6 to i64
-  %8 = tail call i32 @llvm.nvvm.read.ptx.sreg.ctaid.y()
-  %9 = zext nneg i32 %8 to i64
+define ptx_kernel void @add_max_vectors_kernel(i64 %0, ptr readonly captures(none) %1, ptr readonly captures(none) %2, ptr writeonly captures(none) %3) local_unnamed_addr #0 {
+  %5 = tail call i32 @llvm.nvvm.read.ptx.sreg.ctaid.y()
+  %6 = zext nneg i32 %5 to i64
+  %7 = sub i64 %0, %6
+  %8 = icmp sgt i64 %7, 0
+  br i1 %8, label %9, label %19
+
+9:                                                ; preds = %4
   %10 = tail call range(i32 0, 128) i32 @llvm.nvvm.read.ptx.sreg.tid.x()
   %11 = zext nneg i32 %10 to i64
-  %12 = shl nuw nsw i64 %7, 7
-  %13 = sub i64 %0, %12
-  %14 = sub i64 %1, %9
-  %15 = icmp sgt i64 %13, %11
-  %16 = icmp sgt i64 %14, 0
-  %or.cond = select i1 %15, i1 %16, i1 false
-  br i1 %or.cond, label %17, label %26
+  %12 = getelementptr float, ptr %1, i64 %11
+  %13 = load float, ptr %12, align 4
+  %14 = getelementptr float, ptr %2, i64 %11
+  %15 = load float, ptr %14, align 4
+  %16 = fadd float %13, %15
+  %17 = tail call float @llvm.maximum.f32(float %16, float 0.000000e+00)
+  %18 = getelementptr float, ptr %3, i64 %11
+  store float %17, ptr %18, align 4
+  br label %19
 
-17:                                               ; preds = %5
-  %18 = or disjoint i64 %12, %11
-  %19 = getelementptr float, ptr %2, i64 %18
-  %20 = load float, ptr %19, align 4
-  %21 = getelementptr float, ptr %3, i64 %18
-  %22 = load float, ptr %21, align 4
-  %23 = fadd float %20, %22
-  %24 = tail call float @llvm.maximum.f32(float %23, float 0.000000e+00)
-  %25 = getelementptr float, ptr %4, i64 %18
-  store float %24, ptr %25, align 4
-  br label %26
-
-26:                                               ; preds = %17, %5
+19:                                               ; preds = %9, %4
   ret void
 }
-
-; Function Attrs: mustprogress nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare noundef range(i32 0, 2147483647) i32 @llvm.nvvm.read.ptx.sreg.ctaid.x() #1
 
 ; Function Attrs: mustprogress nocallback nofree nosync nounwind speculatable willreturn memory(none)
 declare noundef range(i32 0, 65535) i32 @llvm.nvvm.read.ptx.sreg.ctaid.y() #1
