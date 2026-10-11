@@ -17,8 +17,6 @@
 
 #include "frontend/toy_dialect.h"
 
-#define TOY_ARG_ATTR_NAME "toy.dynamic_dim_arg_idx"
-
 using namespace mlir;
 
 namespace mlir::toy {
@@ -215,7 +213,7 @@ struct ToyMaxOpConverter : public OpConversionPattern<toy::MaxOp> {
         Value result = nestedBuilder.create<arith::MaximumFOp>(loc, args[0], args[1]);
         nestedBuilder.create<linalg::YieldOp>(loc, result);
       };
-    } else if (y.getDefiningOp<arith::ConstantOp>()) {
+    } else if (y.getDefiningOp<toy::ConstantOp>()) {
       indexingMaps.push_back(xIndexMap); // out
       build_fn = [&](OpBuilder &nestedBuilder, Location loc, ValueRange args) {
         Value result = nestedBuilder.create<arith::MaximumFOp>(loc, args[0], y);
@@ -352,8 +350,12 @@ struct ToyTieDimsOpConverter : public OpConversionPattern<toy::TieDimsOp> {
   LogicalResult matchAndRewrite(
       toy::TieDimsOp op, OpAdaptor adaptor,
       ConversionPatternRewriter &rewriter) const override {
-    auto target = op.getTarget();
-    rewriter.replaceOp(op, target);
+    auto target = op.getArg();
+    if (isa<BlockArgument>(target)) {
+      rewriter.replaceOp(op, target);
+    } else if (op.getResult().getNumUses() == 0) {
+      rewriter.eraseOp(op);
+    }
 
     return success();
   }
@@ -370,7 +372,7 @@ struct FoldTieDimsOpPass : public toy::impl::FoldTieDimsOpPassBase<FoldTieDimsOp
     target.addLegalDialect<memref::MemRefDialect>();
     target.addLegalDialect<scf::SCFDialect>();
 
-    target.addIllegalDialect<toy::ToyDialect>();
+    target.addIllegalOp<toy::TieDimsOp>();
 
     // Define the conversion patterns
     RewritePatternSet patterns(&getContext());
@@ -544,6 +546,46 @@ struct FuncOpConverter : public OpConversionPattern<func::FuncOp> {
 
 
 // Step 3: Op Conversion Patterns
+struct TensorEmptyOpMemRefConverter : public OpConversionPattern<tensor::EmptyOp> {
+  using OpConversionPattern<tensor::EmptyOp>::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(
+      tensor::EmptyOp op, OpAdaptor adaptor,
+      ConversionPatternRewriter &rewriter) const override {
+    auto memrefType = getTypeConverter()->convertType<MemRefType>(op.getType());
+    auto newOp = rewriter.create<memref::AllocaOp>(
+      op.getLoc(),
+      memrefType,
+      adaptor.getDynamicSizes()
+    );
+
+    rewriter.replaceOp(op, newOp);
+    return success();
+  }
+};
+
+struct ToyAllocOpMemRefConverter : public OpConversionPattern<toy::AllocOp> {
+  using OpConversionPattern<toy::AllocOp>::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(
+      toy::AllocOp op, OpAdaptor adaptor,
+      ConversionPatternRewriter &rewriter) const override {
+    if (!isa<RankedTensorType>(op.getType())) {
+      return failure();
+    }
+
+    auto memrefType = getTypeConverter()->convertType<MemRefType>(op.getType());
+    auto newOp = rewriter.create<toy::AllocOp>(
+      op.getLoc(),
+      memrefType,
+      adaptor.getDims()
+    );
+
+    rewriter.replaceOp(op, newOp);
+    return success();
+  }
+};
+
 struct ToyTieDimsOpMemRefConverter : public OpConversionPattern<toy::TieDimsOp> {
   using OpConversionPattern<toy::TieDimsOp>::OpConversionPattern;
 
@@ -556,8 +598,8 @@ struct ToyTieDimsOpMemRefConverter : public OpConversionPattern<toy::TieDimsOp> 
 
     auto newOp = rewriter.create<toy::TieDimsOp>(
       op.getLoc(),
-      adaptor.getTarget().getType(),
-      adaptor.getTarget(),
+      adaptor.getArg().getType(),
+      adaptor.getArg(),
       adaptor.getDims()
     );
 
@@ -566,7 +608,79 @@ struct ToyTieDimsOpMemRefConverter : public OpConversionPattern<toy::TieDimsOp> 
   }
 };
 
-struct LinalgGenericOpConverter : public OpConversionPattern<linalg::GenericOp> {
+struct ToyRandomOpMemRefConverter : public OpConversionPattern<toy::RandomOp> {
+  using OpConversionPattern<toy::RandomOp>::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(
+      toy::RandomOp op, OpAdaptor adaptor,
+      ConversionPatternRewriter &rewriter) const override {
+    if (!isa<RankedTensorType>(op.getResult().getType())) {
+      return failure();
+    }
+
+    auto newOp = rewriter.create<toy::RandomOp>(
+      op.getLoc(),
+      adaptor.getArg().getType(),
+      adaptor.getArg()
+    );
+
+    rewriter.replaceOp(op, newOp);
+    return success();
+  }
+};
+
+struct ToyPrintOpMemRefConverter : public OpConversionPattern<toy::PrintOp> {
+  using OpConversionPattern<toy::PrintOp>::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(
+      toy::PrintOp op, OpAdaptor adaptor,
+      ConversionPatternRewriter &rewriter) const override {
+    if (!isa<RankedTensorType>(op.getArg().getType())) {
+      return failure();
+    }
+
+    auto newOp = rewriter.create<toy::PrintOp>(
+      op.getLoc(),
+      op.getType(),
+      adaptor.getArg()
+    );
+
+    rewriter.replaceOp(op, newOp);
+    return success();
+  }
+};
+
+struct ToyCallOpMemRefConverter : public OpConversionPattern<toy::CallOp> {
+  using OpConversionPattern<toy::CallOp>::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(
+      toy::CallOp op, OpAdaptor adaptor,
+      ConversionPatternRewriter &rewriter) const override {
+    for (auto res : op.getResults()) {
+      if (!isa<RankedTensorType>(res.getType())) {
+        return failure();
+      }
+    }
+
+    SmallVector<mlir::Type, 1> resultTypes;
+    auto status = getTypeConverter()->convertTypes(op.getResults(), resultTypes);
+    if (failed(status)) {
+      return failure();
+    }
+
+    auto newOp = rewriter.create<toy::CallOp>(
+      op.getLoc(),
+      resultTypes,
+      adaptor.getCallee(),
+      adaptor.getArgs()
+    );
+
+    rewriter.replaceOp(op, newOp);
+    return success();
+  }
+};
+
+struct LinalgGenericOpMemRefConverter : public OpConversionPattern<linalg::GenericOp> {
   using OpConversionPattern<linalg::GenericOp>::OpConversionPattern;
 
   LogicalResult matchAndRewrite(
@@ -603,19 +717,17 @@ struct ConvertTensorToMemRefPass : public toy::impl::ConvertTensorToMemRefPassBa
       return false;
     }
 
-    if (op->getNumOperands() > 0) {
-      for (const auto& opr : op->getOperands()) {
-        if (isa<TensorType>(opr.getType())) {
-          LLVM_DEBUG(llvm::dbgs() << "\nOperation (" << op << ") " << op->getName().getStringRef() << " is not legal ❌\n");
-          return false;
-        }
+    for (const auto& opr : op->getOperands()) {
+      if (isa<TensorType>(opr.getType())) {
+        LLVM_DEBUG(llvm::dbgs() << "\nOperation (" << op << ") " << op->getName().getStringRef() << " is not legal ❌\n");
+        return false;
       }
-    } else {
-      for (const auto& resType : op->getResultTypes()) {
-        if (isa<TensorType>(resType)) {
-          LLVM_DEBUG(llvm::dbgs() << "\nOperation (" << op << ") " << op->getName().getStringRef() << " is not legal ❌\n");
-          return false;
-        }
+    }
+
+    for (const auto& resType : op->getResultTypes()) {
+      if (isa<TensorType>(resType)) {
+        LLVM_DEBUG(llvm::dbgs() << "\nOperation (" << op << ") " << op->getName().getStringRef() << " is not legal ❌\n");
+        return false;
       }
     }
 
@@ -688,7 +800,20 @@ struct ConvertTensorToMemRefPass : public toy::impl::ConvertTensorToMemRefPassBa
     }
 
     patterns.clear();
-    patterns.add<ToyTieDimsOpMemRefConverter, LinalgGenericOpConverter>(typeConverter, &getContext());
+    patterns.add<
+      // Tensor ops
+      TensorEmptyOpMemRefConverter,
+
+      // Toy ops
+      ToyAllocOpMemRefConverter,
+      ToyTieDimsOpMemRefConverter,
+      ToyRandomOpMemRefConverter,
+      ToyCallOpMemRefConverter,
+      ToyPrintOpMemRefConverter,
+
+      // Linalg ops
+      LinalgGenericOpMemRefConverter
+    >(typeConverter, &getContext());
     if (failed(applyPartialConversion(module, otherTarget, std::move(patterns)))) {
       signalPassFailure();
     }

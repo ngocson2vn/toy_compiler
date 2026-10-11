@@ -23,6 +23,31 @@
 
 #include "utils.h"
 
+namespace toy {
+namespace compiler {
+
+using namespace common;
+namespace backend {
+
+Type getEncodedType(mlir::Type ty) {
+  Type type = Type::INVALID;
+  if (ty.isF32()) {
+    type = Type::F32;
+  } else if (ty.isF16()) {
+    type = Type::F16;
+  } else if (ty.isInteger(32)) {
+    type = Type::I32;
+  }
+
+  assert(type != Type::INVALID && "The type is invalid!");
+
+  return type;
+}
+
+} // namespace backend
+} // namespace compiler
+} // namespace toy
+
 namespace toy::utils {
 
 static std::mutex getenv_mutex;

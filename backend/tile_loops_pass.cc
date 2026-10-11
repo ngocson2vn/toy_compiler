@@ -80,6 +80,12 @@ static bool isComplexAccessPattern(ParallelOp ploop) {
 }
 
 void TileLoopsPass::runOnOperation() {
+  // Skip main function
+  func::FuncOp funcOp = getOperation();
+  if (funcOp.getSymName() == "main") {
+    return;
+  }
+
   SmallVector<int64_t> unrolledTile;
   if (tile_sizes_.size() == unroll_factors_.size()) {
     unrolledTile.reserve(tile_sizes_.size());

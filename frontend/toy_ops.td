@@ -72,9 +72,9 @@ def Toy_CallOp : Op<Toy_Dialect, "call"> {
     This operation call a user-defined function.
   }];
   let arguments = (ins FlatSymbolRefAttr:$callee, Variadic<AnyType>:$args);
-  let results = (outs AnyType:$result);
+  let results = (outs Variadic<AnyType>:$results);
 
-  let assemblyFormat = "$callee`(` $args `)` `:` type($args) attr-dict `->` type($result)";
+  let assemblyFormat = "$callee `(` $args `)` `:` `(` type($args) `)` attr-dict `->` type($results)";
 }
 
 def Toy_PrintOp : Op<Toy_Dialect, "print"> {
@@ -82,7 +82,7 @@ def Toy_PrintOp : Op<Toy_Dialect, "print"> {
   let description = [{
     This operation print a number or a tensor.
   }];
-  let arguments = (ins AnyTypeOf<[F32Tensor, F32, I32]>:$arg);
+  let arguments = (ins AnyTypeOf<[I32, F32, F32Tensor, AnyMemRef]>:$arg);
   let results = (outs I64:$result);
 
   let assemblyFormat = "$arg `:` type($arg) attr-dict `->` type($result)";
@@ -126,10 +126,10 @@ def Toy_TieDimsOp : Op<Toy_Dialect, "tie_dims"> {
   let description = [{
     This operation tie dims with a tensor.
   }];
-  let arguments = (ins AnyTypeOf<[F32Tensor, AnyMemRef]>:$target, Variadic<Index>:$dims);
+  let arguments = (ins AnyTypeOf<[F32Tensor, AnyMemRef]>:$arg, Variadic<Index>:$dims);
   let results = (outs AnyTypeOf<[F32Tensor, AnyMemRef]>:$result);
 
-  let assemblyFormat = "$target `,` $dims `:` type($target) `,` type($dims) attr-dict `->` type($result)";
+  let assemblyFormat = "$arg `,` $dims `:` type($arg) `,` type($dims) attr-dict `->` type($result)";
 
   // let builders = [
   //   // OpBuilder<(ins "Value":$lhs, "Value":$rhs, "int64_t":$size)>,
@@ -177,15 +177,38 @@ def Toy_MaxOp : Op<Toy_Dialect, "max"> {
   // ];
 }
 
+def Toy_AllocOp : Op<Toy_Dialect, "alloc"> {
+  let summary = "Alloc operation for the toy dialect";
+  let description = [{
+    This operation generates random elements for a tensor.
+  }];
+  let arguments = (ins Variadic<Index>:$dims);
+  let results = (outs AnyTypeOf<[F32Tensor, AnyMemRef]>:$result);
+
+  let assemblyFormat = "$dims `:` attr-dict `->` type($result)";
+
+  // // Provide extra utility definitions on the c++ operation class definition.
+  // let extraClassDeclaration = [{
+  //   MemRefType getMemRefType() { 
+  //     auto type = getType();
+  //     if (isa<MemRefType>(type)) {
+  //       return cast<MemRefType>(type);
+  //     }
+
+  //     return nullptr;
+  //   }
+  // }];
+}
+
 def Toy_RandomOp : Op<Toy_Dialect, "random"> {
   let summary = "Random operation for the toy dialect";
   let description = [{
     This operation generates random elements for a tensor.
   }];
-  let arguments = (ins F32Tensor:$target);
-  let results = (outs F32Tensor:$result);
+  let arguments = (ins AnyTypeOf<[F32Tensor, AnyMemRef]>:$arg);
+  let results = (outs AnyTypeOf<[F32Tensor, AnyMemRef]>:$result);
 
-  let assemblyFormat = "$target `:` type($target) attr-dict `->` type($result)";
+  let assemblyFormat = "$arg `:` type($arg) attr-dict `->` type($result)";
 }
 
 def Toy_StoreOp : Op<Toy_Dialect, "store"> {

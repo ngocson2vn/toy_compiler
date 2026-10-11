@@ -1,3 +1,5 @@
+#pragma once
+
 #include <cstdio>
 
 #define LOG_ERROR(...) \
@@ -9,3 +11,19 @@
   fprintf(stderr, "INFO "); \
   fprintf(stdout, __VA_ARGS__); \
   fprintf(stdout, "\n")
+
+namespace toy {
+namespace compiler {
+namespace common {
+
+enum class Type {
+  TENSOR = 1,
+  I32 = 2,
+  F32 = 3,
+  F16 = 4,
+  INVALID = 99
+};
+
+}
+}
+}

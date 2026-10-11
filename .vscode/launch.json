@@ -13,7 +13,9 @@
         "program": "${workspaceFolder}/build/compiler",
         "args": [
             "./add_max_vectors.toy",
-            "sm_86"
+            "sm_86",
+            "false",
+            "false"
         ]
     }
   ]

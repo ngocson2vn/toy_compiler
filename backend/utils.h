@@ -3,7 +3,10 @@
 #include <string>
 #include <vector>
 
+#include "common/common.h"
 #include "common/status.h"
+
+#include "mlir/IR/Types.h"
 
 namespace mlir {
 namespace gpu {
@@ -14,6 +17,18 @@ class GPUModuleOp;
 namespace llvm {
 class Module;
 }
+
+namespace toy {
+namespace compiler {
+
+using namespace common;
+namespace backend {
+
+Type getEncodedType(mlir::Type ty);
+
+} // namespace backend
+} // namespace compiler
+} // namespace toy
 
 namespace toy::utils {
 

@@ -24,17 +24,13 @@
 #include <utility>
 #include <vector>
 
+#include "common/common.h"
+
 namespace toy {
 namespace compiler {
-namespace frontend {
 
-enum class Type {
-  TENSOR = 1,
-  I32 = 2,
-  F32 = 3,
-  F16 = 4,
-  INVALID = 99
-};
+using namespace common;
+namespace frontend {
 
 namespace type::name {
   static const std::string F32 = "f32";

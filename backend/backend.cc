@@ -16,16 +16,22 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/Passes.h"
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
+#include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/Conversion/SCFToGPU/SCFToGPU.h"
 #include "mlir/Conversion/SCFToGPU/SCFToGPUPass.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
-#include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
+#include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
+#include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/NVVMToLLVM/NVVMToLLVM.h"
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMPass.h"
+#include "mlir/Conversion/UBToLLVM/UBToLLVM.h"
+#include "mlir/Conversion/MathToLLVM/MathToLLVM.h"
+#include "mlir/Conversion/ComplexToLLVM/ComplexToLLVM.h"
+#include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
 #include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
 
 #include "mlir/Target/LLVM/NVVM/Target.h"
@@ -53,14 +59,13 @@ namespace backend {
 
 // Initialize
 static bool __initialized = []() -> bool {
-  // static std::once_flag init_flag;
-  // std::call_once(init_flag, []() {
-  //   llvm::LLVMInitializeX86TargetInfo();
-  //   llvm::InitializeAllTargets();
-  //   llvm::InitializeAllTargetMCs();
-  //   llvm::InitializeAllAsmParsers();
-  //   llvm::InitializeAllAsmPrinters();
-  // });
+  static std::once_flag init_flag;
+  std::call_once(init_flag, []() {
+    LLVMInitializeX86Target();
+    LLVMInitializeX86TargetInfo();
+    LLVMInitializeX86TargetMC();
+    LLVMInitializeX86AsmPrinter();
+  });
 
   static llvm::codegen::RegisterCodeGenFlags CGF;
 
@@ -75,6 +80,12 @@ static void registerRequiredExtensions(DialectRegistry& registry) {
   mlir::registerNVVMDialectTranslation(registry);
   mlir::registerLLVMDialectTranslation(registry);
   mlir::registerConvertNVVMToLLVMInterface(registry);
+  mlir::registerConvertMathToLLVMInterface(registry);
+  mlir::registerConvertComplexToLLVMInterface(registry);
+  mlir::ub::registerConvertUBToLLVMInterface(registry);
+  mlir::arith::registerConvertArithToLLVMInterface(registry);
+  mlir::cf::registerConvertControlFlowToLLVMInterface(registry);
+  mlir::vector::registerConvertVectorToLLVMInterface(registry);
   mlir::NVVM::registerNVVMTargetInterfaceExternalModels(registry);
   mlir::gpu::registerOffloadingLLVMTranslationInterfaceExternalModels(registry);
 }
@@ -137,6 +148,7 @@ llvm::LogicalResult lower(ModuleOp& module, const std::string& targetArch) {
   pm.addPass(mlir::createCanonicalizerPass());
   pm.addPass(mlir::createCSEPass());
 
+#if 1
 
   //============================================================================
   // Lower GPU to LLVM
@@ -174,6 +186,8 @@ llvm::LogicalResult lower(ModuleOp& module, const std::string& targetArch) {
   pm.addPass(mlir::createGpuModuleToBinaryPass(binPassOptions));
   pm.addPass(mlir::createCanonicalizerPass());
   pm.addPass(mlir::createCSEPass());
+
+#endif
 
   //============================================================================
   // Lower host code

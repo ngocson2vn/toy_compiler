@@ -30,6 +30,8 @@
 #include "utils.h"
 #include "cuda_utils.h"
 
+#include "frontend/toy_dialect.h"
+
 namespace fs = std::filesystem;
 
 using namespace mlir;
@@ -44,7 +46,13 @@ namespace mlir::toy {
 
 } // namespace mlir::toy
 
+namespace toy {
+namespace compiler {
+namespace backend {
+
 namespace {
+
+static constexpr char kMainFuncName[] = "main";
 
 struct LowerMemRefToLLVMFuncOpPattern : public mlir::OpConversionPattern<func::FuncOp> {  
   using OpConversionPattern<func::FuncOp>::OpConversionPattern;
@@ -57,13 +65,13 @@ struct LowerMemRefToLLVMFuncOpPattern : public mlir::OpConversionPattern<func::F
     auto oldFuncType = oldFunc.getFunctionType();
 
     // Convert input types
-    SmallVector<Type> newInputTypes;
+    SmallVector<mlir::Type> newInputTypes;
     if (failed(typeConverter->convertTypes(oldFuncType.getInputs(), newInputTypes))) {
       return failure();
     }
 
     // Convert result types
-    SmallVector<Type> newResultTypes;
+    SmallVector<mlir::Type> newResultTypes;
     if (failed(typeConverter->convertTypes(oldFuncType.getResults(), newResultTypes))) {
       return failure();
     }
@@ -98,6 +106,13 @@ struct LowerMemRefToLLVMFuncOpPattern : public mlir::OpConversionPattern<func::F
     }
 
     rewriter.applySignatureConversion(&entryBlock, sig.value(), typeConverter);
+
+    // Replace func::ReturnOp
+    auto returnOp = cast<func::ReturnOp>(newFunc.front().getTerminator());
+    if (returnOp.getNumOperands() == 0) {
+      rewriter.setInsertionPointAfter(returnOp);
+      rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(returnOp, returnOp.getOperands());
+    }
 
     //===============================================================================================
     // 2. Replace oldFunc with newFunc
@@ -154,9 +169,190 @@ struct LowerMemRefToLLVMStoreOpPattern : public OpConversionPattern<memref::Stor
   }
 };
 
+struct LowerToyToLLVMCallOpPattern : public OpConversionPattern<mlir::toy::CallOp> {
+  using OpConversionPattern<mlir::toy::CallOp>::OpConversionPattern;
+  LogicalResult matchAndRewrite(mlir::toy::CallOp callOp, OpAdaptor adaptor, ConversionPatternRewriter &rewriter) const override {
+    SmallVector<mlir::Type, 1> resultTypes;
+    auto status = getTypeConverter()->convertTypes(callOp.getResults(), resultTypes);
+    if (failed(status)) {
+      return failure();
+    }
+
+    auto calleeAttr = rewriter.getStringAttr(callOp.getCallee());
+    auto newOp = rewriter.create<LLVM::CallOp>(
+                  callOp.getLoc(), resultTypes, calleeAttr, adaptor.getArgs());
+    rewriter.replaceOp(callOp, newOp);
+
+    return success();
+  }
+};
+
+struct LowerToyToLLVMConstantOpPattern : public OpConversionPattern<mlir::toy::ConstantOp> {
+  using OpConversionPattern<mlir::toy::ConstantOp>::OpConversionPattern;
+  LogicalResult matchAndRewrite(mlir::toy::ConstantOp constOp, OpAdaptor adaptor, ConversionPatternRewriter &rewriter) const override {
+    auto newOp = rewriter.create<LLVM::ConstantOp>(constOp.getLoc(), adaptor.getValue());
+    rewriter.replaceOp(constOp, newOp);
+
+    return success();
+  }
+};
+
+struct LowerToyToLLVMAllocOpPattern : public OpConversionPattern<mlir::toy::AllocOp> {
+  using OpConversionPattern<mlir::toy::AllocOp>::OpConversionPattern;
+  const llvm::StringRef kAllocFuncName = "toy_alloc";
+  LogicalResult matchAndRewrite(mlir::toy::AllocOp allocOp, OpAdaptor adaptor, ConversionPatternRewriter &rewriter) const override {
+    auto context = getContext();
+
+    SmallVector<Value> args;
+
+    auto loc = allocOp.getLoc();
+    auto dims = allocOp.getDims();
+    assert(dims.size() > 0 && "dims is empty!");
+    Value numElems = rewriter.create<arith::IndexCastOp>(loc, rewriter.getI32Type(), dims.front());
+    for (auto it = dims.begin() + 1; it != dims.end(); it++) {
+      Value rhs = rewriter.create<arith::IndexCastOp>(loc, rewriter.getI32Type(), *it);
+      numElems = rewriter.create<LLVM::MulOp>(loc, numElems, rhs);
+    }
+    args.push_back(numElems);
+
+    auto memrefType = cast<MemRefType>(allocOp.getType());
+    auto encodedElemType = getEncodedType(memrefType.getElementType());
+    auto encodedElemTypeVal = rewriter.create<LLVM::ConstantOp>(
+                                loc,
+                                rewriter.getI32Type(),
+                                static_cast<int64_t>(encodedElemType)
+                              );
+    args.push_back(encodedElemTypeVal);
+
+    auto moduleOp = allocOp->getParentOfType<mlir::ModuleOp>();
+    LLVM::LLVMFuncOp allocFuncOp = dyn_cast_or_null<LLVM::LLVMFuncOp>(moduleOp.lookupSymbol(kAllocFuncName));
+    if (!allocFuncOp) {
+      rewriter.setInsertionPointToStart(moduleOp.getBody());
+
+      auto i32Type = IntegerType::get(context, 32);
+      auto ptrType = LLVM::LLVMPointerType::get(context);
+      auto allocFuncType = LLVM::LLVMFunctionType::get(ptrType, llvm::ArrayRef<mlir::Type>{i32Type, i32Type});
+      allocFuncOp = rewriter.create<LLVM::LLVMFuncOp>(loc, kAllocFuncName, allocFuncType, LLVM::Linkage::External);
+    }
+
+    rewriter.setInsertionPoint(allocOp);
+    auto newOp = rewriter.create<LLVM::CallOp>(loc, allocFuncOp, args);
+    rewriter.replaceOp(allocOp, newOp);
+
+    return success();
+  }
+};
+
+struct LowerToyToLLVMRandomOpPattern : public OpConversionPattern<mlir::toy::RandomOp> {
+  using OpConversionPattern<mlir::toy::RandomOp>::OpConversionPattern;
+  const llvm::StringRef kRandomFuncName = "toy_random";
+  LogicalResult matchAndRewrite(mlir::toy::RandomOp randomOp, OpAdaptor adaptor, ConversionPatternRewriter &rewriter) const override {
+    auto arg = randomOp.getArg();
+    auto allocOp = arg.getDefiningOp<mlir::toy::AllocOp>();
+    if (!allocOp) {
+      return failure();
+    }
+
+    auto dims = allocOp.getDims();
+    assert(dims.size() > 0 && "dims is empty!");
+
+    SmallVector<Value> args;
+    args.push_back(adaptor.getArg());
+    auto loc = randomOp.getLoc();
+    auto context = getContext();
+
+    Value numElems = rewriter.create<arith::IndexCastOp>(loc, rewriter.getI32Type(), dims.front());
+    for (auto it = dims.begin() + 1; it != dims.end(); it++) {
+      Value rhs = rewriter.create<arith::IndexCastOp>(loc, rewriter.getI32Type(), *it);
+      numElems = rewriter.create<LLVM::MulOp>(loc, numElems, rhs);
+    }
+    args.push_back(numElems);
+
+    auto memrefType = cast<MemRefType>(randomOp.getType());
+    auto encodedElemType = getEncodedType(memrefType.getElementType());
+    auto encodedElemTypeVal = rewriter.create<LLVM::ConstantOp>(
+                                loc,
+                                rewriter.getI32Type(),
+                                static_cast<int64_t>(encodedElemType)
+                              );
+    args.push_back(encodedElemTypeVal);
+
+    auto moduleOp = randomOp->getParentOfType<mlir::ModuleOp>();
+    LLVM::LLVMFuncOp randomFuncOp = dyn_cast_or_null<LLVM::LLVMFuncOp>(moduleOp.lookupSymbol(kRandomFuncName));
+    if (!randomFuncOp) {
+      rewriter.setInsertionPointToStart(moduleOp.getBody());
+
+      auto i32Type = IntegerType::get(context, 32);
+      auto ptrType = LLVM::LLVMPointerType::get(context);
+      auto randomFuncType = LLVM::LLVMFunctionType::get(ptrType, llvm::ArrayRef<mlir::Type>{ptrType, i32Type, i32Type});
+      randomFuncOp = rewriter.create<LLVM::LLVMFuncOp>(loc, kRandomFuncName, randomFuncType, LLVM::Linkage::External);
+    }
+
+    rewriter.setInsertionPoint(randomOp);
+    auto newOp = rewriter.create<LLVM::CallOp>(loc, randomFuncOp, args);
+    rewriter.replaceOp(randomOp, newOp);
+
+    return success();
+  }
+};
+
+struct LowerToyToLLVMPrintOpPattern : public OpConversionPattern<mlir::toy::PrintOp> {
+  using OpConversionPattern<mlir::toy::PrintOp>::OpConversionPattern;
+  const llvm::StringRef kPrintFuncName = "toy_print";
+  LogicalResult matchAndRewrite(mlir::toy::PrintOp printOp, OpAdaptor adaptor, ConversionPatternRewriter &rewriter) const override {
+    auto target = printOp.getArg();
+    auto allocOp = target.getDefiningOp<mlir::toy::AllocOp>();
+    if (!allocOp) {
+      return failure();
+    }
+
+    auto dims = allocOp.getDims();
+    assert(dims.size() > 0 && "dims is empty!");
+
+    SmallVector<Value> args;
+    args.push_back(adaptor.getArg());
+    auto loc = printOp.getLoc();
+    auto context = getContext();
+
+    Value numElems = rewriter.create<arith::IndexCastOp>(loc, rewriter.getI32Type(), dims.front());
+    for (auto it = dims.begin() + 1; it != dims.end(); it++) {
+      Value rhs = rewriter.create<arith::IndexCastOp>(loc, rewriter.getI32Type(), *it);
+      numElems = rewriter.create<LLVM::MulOp>(loc, numElems, rhs);
+    }
+    args.push_back(numElems);
+
+    auto memrefType = cast<MemRefType>(printOp.getArg().getType());
+    auto encodedElemType = getEncodedType(memrefType.getElementType());
+    auto encodedElemTypeVal = rewriter.create<LLVM::ConstantOp>(
+                                loc,
+                                rewriter.getI32Type(),
+                                static_cast<int64_t>(encodedElemType)
+                              );
+    args.push_back(encodedElemTypeVal);
+
+    auto moduleOp = printOp->getParentOfType<mlir::ModuleOp>();
+    LLVM::LLVMFuncOp printFuncOp = dyn_cast_or_null<LLVM::LLVMFuncOp>(moduleOp.lookupSymbol(kPrintFuncName));
+    if (!printFuncOp) {
+      rewriter.setInsertionPointToStart(moduleOp.getBody());
+
+      auto i32Type = IntegerType::get(context, 32);
+      auto i64Type = IntegerType::get(context, 64);
+      auto ptrType = LLVM::LLVMPointerType::get(context);
+      auto printFuncType = LLVM::LLVMFunctionType::get(i64Type, llvm::ArrayRef<mlir::Type>{ptrType, i32Type, i32Type});
+      printFuncOp = rewriter.create<LLVM::LLVMFuncOp>(loc, kPrintFuncName, printFuncType, LLVM::Linkage::External);
+    }
+
+    rewriter.setInsertionPoint(printOp);
+    auto newOp = rewriter.create<LLVM::CallOp>(loc, printFuncOp, args);
+    rewriter.replaceOp(printOp, newOp);
+
+    return success();
+  }
+};
+
 struct LowerMemRefToLLVMTypeConverter : public TypeConverter {
   LowerMemRefToLLVMTypeConverter() {
-    addConversion([](Type srcType) -> Type {
+    addConversion([](mlir::Type srcType) -> mlir::Type {
       if (auto memrefType = dyn_cast<MemRefType>(srcType)) {
         return LLVM::LLVMPointerType::get(srcType.getContext());
       }
@@ -173,8 +369,8 @@ struct LowerMemRefToLLVMTypeConverter : public TypeConverter {
         [](mlir::OpBuilder &builder, mlir::Type resultType,
            mlir::ValueRange convertedValues, mlir::Location loc) -> mlir::Value {
           assert(convertedValues.size() == 1 && "convertedValues must have size = 1");
-          auto srcValue = builder.create<arith::IndexCastOp>(loc, resultType, convertedValues[0]);
-          return srcValue;
+          auto castOp = builder.create<UnrealizedConversionCastOp>(loc, resultType, convertedValues[0]);
+          return castOp.getResult(0);
         });
 
     // Register target materialization: tensor<?xf32> -> memref<?xf32>
@@ -184,8 +380,8 @@ struct LowerMemRefToLLVMTypeConverter : public TypeConverter {
 
           SmallVector<Value> tgtValues;
           for (const auto& [t, v] : llvm::zip(resultTypes, srcValues)) {
-            auto ret = builder.create<arith::IndexCastOp>(loc, t, v);
-            tgtValues.push_back(ret);
+            auto castOp = builder.create<UnrealizedConversionCastOp>(loc, t, v);
+            tgtValues.push_back(castOp.getResult(0));
           }
 
           return tgtValues;
@@ -210,18 +406,21 @@ class LowerMemRefToLLVMPass : public mlir::toy::impl::LowerMemRefToLLVMPassBase<
     //===========================================================================
     // 1. Convert function signature
     //===========================================================================
+    target.addLegalDialect<arith::ArithDialect>();
     target.addLegalDialect<LLVM::LLVMDialect>();
+    // target.addDynamicallyLegalOp<func::FuncOp>([&](func::FuncOp op) {
+    //   auto isLegal = typeConverter.isSignatureLegal(op.getFunctionType());
+    //   if (!isLegal) {
+    //     LLVM_DEBUG(llvm::dbgs() << "\nFuncOp " << op.getOperation() << " is not legal ❌\n");
+    //     return false;
+    //   }
 
-    target.addDynamicallyLegalOp<func::FuncOp>([&](func::FuncOp op) {
-      auto isLegal = typeConverter.isSignatureLegal(op.getFunctionType());
-      if (!isLegal) {
-        LLVM_DEBUG(llvm::dbgs() << "\nFuncOp " << op.getOperation() << " is not legal ❌\n");
-        return false;
-      }
-
-      LLVM_DEBUG(llvm::dbgs() << "\nFuncOp is legal ✅\n");
-      return true;
-    });
+    //   LLVM_DEBUG(llvm::dbgs() << "\nFuncOp is legal ✅\n");
+    //   return true;
+    // });
+  
+    target.addIllegalDialect<func::FuncDialect>();
+    target.addIllegalDialect<mlir::toy::ToyDialect>();
 
     // Populate conversion patterns
     RewritePatternSet patterns(&getContext());
@@ -229,7 +428,12 @@ class LowerMemRefToLLVMPass : public mlir::toy::impl::LowerMemRefToLLVMPassBase<
       LowerMemRefToLLVMFuncOpPattern,
       LowerMemRefToLLVMLoadOpPattern,
       LowerMemRefToLLVMStoreOpPattern,
-      LowerMemRefToLLVMReturnOpPattern
+      LowerMemRefToLLVMReturnOpPattern,
+      LowerToyToLLVMConstantOpPattern,
+      LowerToyToLLVMAllocOpPattern,
+      LowerToyToLLVMRandomOpPattern,
+      LowerToyToLLVMCallOpPattern,
+      LowerToyToLLVMPrintOpPattern
     >(typeConverter, &getContext());
 
     // Apply partial convertion
@@ -271,7 +475,7 @@ struct InjectRuntimeCtxLLVMFuncOpPattern : public mlir::OpConversionPattern<LLVM
     auto oldInputTypes = oldFuncType.getParams();
 
     // Inject RuntimeCtx
-    SmallVector<Type> newInputTypes;
+    SmallVector<mlir::Type> newInputTypes;
     newInputTypes.push_back(LLVM::LLVMPointerType::get(oldFunc.getContext()));
     newInputTypes.append(oldInputTypes.begin(), oldInputTypes.end());
 
@@ -345,15 +549,25 @@ class InjectRuntimeCtxPass : public mlir::toy::impl::InjectRuntimeCtxPassBase<In
   void runOnOperation() override {
     auto module = getOperation();
 
+    if (!!module.lookupSymbol(kMainFuncName)) {
+      return;
+    }
+
     // Apply partial convertion
     ConversionTarget target(getContext());
     target.addLegalDialect<LLVM::LLVMDialect>();
     target.addDynamicallyLegalOp<LLVM::LLVMFuncOp>([](LLVM::LLVMFuncOp funcOp) {
-      if (!funcOp->getAttr(kRuntimeCtx)) {
-        return false;
+      if (funcOp.getSymName() == kMainFuncName) {
+        // main function is always legal
+        return true;
+      } else if (funcOp.getBlocks().size() == 0) {
+        // external function is always legal
+        return true;
+      } else if (!!funcOp->getAttr(kRuntimeCtx)) {
+        return true;
       }
 
-      return true;
+      return false;
     });
 
     target.addDynamicallyLegalOp<gpu::LaunchFuncOp>([](gpu::LaunchFuncOp launchOp) {
@@ -543,3 +757,7 @@ class LowerLLVMToObjectPass : public mlir::toy::impl::LowerLLVMToObjectPassBase<
 };
 
 } // namespace
+
+} // namespace backend
+} // namespace compiler
+} // namespace toy

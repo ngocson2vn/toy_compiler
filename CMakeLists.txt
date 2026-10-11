@@ -92,7 +92,12 @@ target_link_libraries(compiler PRIVATE
   MLIRSCFToControlFlow
   MLIRGPUToNVVMTransforms
   MLIRConvertToLLVMPass
+  MLIRArithToLLVM
   MLIRNVVMToLLVM
+  MLIRUBToLLVM
+  MLIRMathToLLVM
+  MLIRComplexToLLVM
+  MLIRVectorToLLVM
   MLIRBuiltinToLLVMIRTranslation
   MLIRNVVMToLLVMIRTranslation
   MLIRGPUToLLVMIRTranslation
@@ -102,6 +107,10 @@ target_link_libraries(compiler PRIVATE
   MLIRSupport
   LLVMSupport
   LLVMX86Info
+  LLVMX86Desc
+  LLVMX86CodeGen
+  LLVMX86TargetMCA
+  LLVMX86AsmParser
   LLVMNVPTXInfo
   ${CUDA_RUNTIME_LIBRARY}
 )

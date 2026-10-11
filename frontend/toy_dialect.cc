@@ -21,18 +21,26 @@ namespace {
 struct TensorDimOpPattern : OpRewritePattern<tensor::DimOp> {
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(tensor::DimOp op, PatternRewriter& rewriter) const override {
-    auto tie = op.getSource().getDefiningOp<toy::TieDimsOp>();
     auto idx = op.getConstantIndex();
-    if (!tie || !idx) {
+    if (!idx) {
       return failure();
     }
 
-    auto tensorType = cast<RankedTensorType>(tie.getType());
+    auto src = op.getSource();
+    auto tensorType = cast<RankedTensorType>(src.getType());
     if (!tensorType.isDynamicDim(idx.value())) {
       return failure();
     }
 
-    auto dimVal = tie.getDims()[idx.value()];
+    Value dimVal;
+    if (auto tieOp = src.getDefiningOp<toy::TieDimsOp>()) {
+      dimVal = tieOp.getDims()[idx.value()];
+    } else if (auto allocOp = src.getDefiningOp<toy::AllocOp>()) {
+      dimVal = allocOp.getDims()[idx.value()];
+    } else {
+      return failure();
+    }
+
     rewriter.replaceOp(op, dimVal);
 
     return success();
@@ -42,19 +50,38 @@ struct TensorDimOpPattern : OpRewritePattern<tensor::DimOp> {
 struct MemRefDimOpPattern : OpRewritePattern<memref::DimOp> {
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(memref::DimOp op, PatternRewriter& rewriter) const override {
-    auto tie = op.getSource().getDefiningOp<toy::TieDimsOp>();
     auto idx = op.getConstantIndex();
-    if (!tie || !idx) {
+    if (!idx) {
       return failure();
     }
 
-    auto memrefType = cast<MemRefType>(tie.getType());
+    auto src = op.getSource();
+    auto memrefType = cast<MemRefType>(src.getType());
     if (!memrefType.isDynamicDim(idx.value())) {
       return failure();
     }
 
-    auto dimVal = tie.getDims()[idx.value()];
+    Value dimVal;
+    if (auto tieOp = src.getDefiningOp<toy::TieDimsOp>()) {
+      dimVal = tieOp.getDims()[idx.value()];
+    } else if (auto allocOp = src.getDefiningOp<toy::AllocOp>()) {
+      dimVal = allocOp.getDims()[idx.value()];
+    } else {
+      return failure();
+    }
+
     rewriter.replaceOp(op, dimVal);
+
+    return success();
+  }
+};
+
+struct EraseToyTieDimsOpPattern : OpRewritePattern<toy::TieDimsOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(toy::TieDimsOp op, PatternRewriter& rewriter) const override {
+    if (op.getResult().getNumUses() == 0) {
+      rewriter.eraseOp(op);
+    }
 
     return success();
   }
@@ -130,7 +157,7 @@ void FuncOp::print(mlir::OpAsmPrinter &p) {
 }
 
 void TieDimsOp::getCanonicalizationPatterns(RewritePatternSet& patterns, MLIRContext* ctx) {
-  patterns.add<TensorDimOpPattern, MemRefDimOpPattern>(ctx);
+  patterns.add<TensorDimOpPattern, MemRefDimOpPattern, EraseToyTieDimsOpPattern>(ctx);
 }
 
 void registerBufferizableOpInterfaceExternalModels(DialectRegistry &registry) {
