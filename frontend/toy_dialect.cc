@@ -1,9 +1,12 @@
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
-
 #include "toy_dialect.h"
 #include "frontend/toy_dialect.cpp.inc"
 
 using namespace mlir;
+using namespace mlir::bufferization;
 
 // Register the dialect with the MLIR context
 void mlir::toy::ToyDialect::initialize() {
@@ -11,6 +14,102 @@ void mlir::toy::ToyDialect::initialize() {
 #define GET_OP_LIST
 #include "frontend/toy_ops.cpp.inc"
     >();
+}
+
+namespace {
+
+struct TensorDimOpPattern : OpRewritePattern<tensor::DimOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(tensor::DimOp op, PatternRewriter& rewriter) const override {
+    auto idx = op.getConstantIndex();
+    if (!idx) {
+      return failure();
+    }
+
+    auto src = op.getSource();
+    auto tensorType = cast<RankedTensorType>(src.getType());
+    if (!tensorType.isDynamicDim(idx.value())) {
+      return failure();
+    }
+
+    Value dimVal;
+    if (auto tieOp = src.getDefiningOp<toy::TieDimsOp>()) {
+      dimVal = tieOp.getDims()[idx.value()];
+    } else if (auto allocOp = src.getDefiningOp<toy::AllocOp>()) {
+      dimVal = allocOp.getDims()[idx.value()];
+    } else {
+      return failure();
+    }
+
+    rewriter.replaceOp(op, dimVal);
+
+    return success();
+  }
+};
+
+struct MemRefDimOpPattern : OpRewritePattern<memref::DimOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(memref::DimOp op, PatternRewriter& rewriter) const override {
+    auto idx = op.getConstantIndex();
+    if (!idx) {
+      return failure();
+    }
+
+    auto src = op.getSource();
+    auto memrefType = cast<MemRefType>(src.getType());
+    if (!memrefType.isDynamicDim(idx.value())) {
+      return failure();
+    }
+
+    Value dimVal;
+    if (auto tieOp = src.getDefiningOp<toy::TieDimsOp>()) {
+      dimVal = tieOp.getDims()[idx.value()];
+    } else if (auto allocOp = src.getDefiningOp<toy::AllocOp>()) {
+      dimVal = allocOp.getDims()[idx.value()];
+    } else {
+      return failure();
+    }
+
+    rewriter.replaceOp(op, dimVal);
+
+    return success();
+  }
+};
+
+struct EraseToyTieDimsOpPattern : OpRewritePattern<toy::TieDimsOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(toy::TieDimsOp op, PatternRewriter& rewriter) const override {
+    if (op.getResult().getNumUses() == 0) {
+      rewriter.eraseOp(op);
+    }
+
+    return success();
+  }
+};
+
+struct TieDimsBufferizableModel
+  : public bufferization::BufferizableOpInterface::ExternalModel<TieDimsBufferizableModel, toy::TieDimsOp> {
+  bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
+                              const AnalysisState &state) const {
+    return false;
+  }
+
+  bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
+                               const AnalysisState &state) const {
+    return false;
+  }
+
+  AliasingValueList getAliasingValues(Operation *op, OpOperand &opOperand,
+                                      const AnalysisState &state) const {
+    return {{op->getResult(0), BufferRelation::Equivalent}};
+  }
+
+  bool isWritable(Operation *op, Value value,
+                  const bufferization::AnalysisState &state) const {
+    return isa<OpResult>(value);  // the result is a view of a writable buffer
+  }
+};
+
 }
 
 namespace mlir {
@@ -55,6 +154,16 @@ void FuncOp::print(mlir::OpAsmPrinter &p) {
   mlir::function_interface_impl::printFunctionOp(
       p, *this, /*isVariadic=*/false, getFunctionTypeAttrName(),
       getArgAttrsAttrName(), getResAttrsAttrName());
+}
+
+void TieDimsOp::getCanonicalizationPatterns(RewritePatternSet& patterns, MLIRContext* ctx) {
+  patterns.add<TensorDimOpPattern, MemRefDimOpPattern, EraseToyTieDimsOpPattern>(ctx);
+}
+
+void registerBufferizableOpInterfaceExternalModels(DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, ToyDialect *dialect) {
+    TieDimsOp::attachInterface<TieDimsBufferizableModel>(*ctx);
+  });
 }
 
 } // namespace toy

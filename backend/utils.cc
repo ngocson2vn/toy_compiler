@@ -15,12 +15,38 @@
 #include <algorithm>
 #include <filesystem>
 
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Support/FileUtilities.h"
 
 #include "llvm/IR/Module.h"
 #include "llvm/Support/ToolOutputFile.h"
 
 #include "utils.h"
+
+namespace toy {
+namespace compiler {
+
+using namespace common;
+namespace backend {
+
+Type getEncodedType(mlir::Type ty) {
+  Type type = Type::INVALID;
+  if (ty.isF32()) {
+    type = Type::F32;
+  } else if (ty.isF16()) {
+    type = Type::F16;
+  } else if (ty.isInteger(32)) {
+    type = Type::I32;
+  }
+
+  assert(type != Type::INVALID && "The type is invalid!");
+
+  return type;
+}
+
+} // namespace backend
+} // namespace compiler
+} // namespace toy
 
 namespace toy::utils {
 
@@ -181,9 +207,23 @@ std::string genTempFile() {
   return tempPath.string();
 }
 
+void dumpGPUModule(mlir::gpu::GPUModuleOp& gpuMod) {
+  static uint64_t counter = 0;
+  std::string errorMessage;
+  auto fileName = gpuMod.getName().str() + std::to_string(counter++) + ".mlir";
+  auto output = mlir::openOutputFile(fileName, &errorMessage);
+  if (!output) {
+    llvm::errs() << errorMessage << "\n";
+    return;
+  }
+  output->keep();
+
+  gpuMod.print(output->os());
+}
+
 void dumpLLVMIR(llvm::Module& llvmMod) {
   std::string errorMessage;
-  auto fileName = llvmMod.getName().str() + ".mlir";
+  auto fileName = llvmMod.getName().str() + "_host.llir";
   auto output = mlir::openOutputFile(fileName, &errorMessage);
   if (!output) {
     llvm::errs() << errorMessage << "\n";

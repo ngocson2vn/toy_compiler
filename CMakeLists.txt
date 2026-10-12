@@ -78,7 +78,6 @@ target_link_libraries(compiler PRIVATE
   backend
   MLIRIR
   MLIRDialect
-  MLIRRegisterAllExtensions
   MLIRFuncDialect
   MLIRArithDialect
   MLIRLinalgDialect
@@ -93,20 +92,30 @@ target_link_libraries(compiler PRIVATE
   MLIRSCFToControlFlow
   MLIRGPUToNVVMTransforms
   MLIRConvertToLLVMPass
+  MLIRArithToLLVM
+  MLIRNVVMToLLVM
+  MLIRUBToLLVM
+  MLIRMathToLLVM
+  MLIRComplexToLLVM
+  MLIRVectorToLLVM
   MLIRBuiltinToLLVMIRTranslation
   MLIRNVVMToLLVMIRTranslation
   MLIRGPUToLLVMIRTranslation
   MLIRLLVMToLLVMIRTranslation
-  MLIRExecutionEngine
+  MLIRReconcileUnrealizedCasts
   MLIRParser
   MLIRSupport
-  MLIRTableGen
-  LLVMTableGen
   LLVMSupport
-  ${CLANG_LIB_DIR}/libclang_rt.ubsan_standalone.a
+  LLVMX86Info
+  LLVMX86Desc
+  LLVMX86CodeGen
+  LLVMX86TargetMCA
+  LLVMX86AsmParser
+  LLVMNVPTXInfo
   ${CUDA_RUNTIME_LIBRARY}
 )
 
+# ${CLANG_LIB_DIR}/libclang_rt.ubsan_standalone.a
 
 #===---------------------------------------------------------===#
 #             Build a add_two_vectors client binary

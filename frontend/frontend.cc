@@ -19,6 +19,7 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/Passes.h"
@@ -38,17 +39,21 @@
 #include "toy_dialect.h"
 #include "frontend.h"
 
-using namespace mlir::toy;
-using namespace toy::compiler::frontend;
-
 using llvm::ArrayRef;
 using llvm::cast;
 using llvm::dyn_cast;
 using llvm::isa;
 using llvm::ScopedHashTableScope;
+using llvm::ScopedHashTable;
 using llvm::SmallVector;
 using llvm::StringRef;
 using llvm::Twine;
+
+using namespace mlir;
+
+namespace toy {
+namespace compiler {
+namespace frontend {
 
 namespace {
 
@@ -68,8 +73,9 @@ public:
     // add them to the module.
     theModule = mlir::ModuleOp::create(builder.getUnknownLoc());
 
-    for (FunctionAST& f : moduleAST)
+    for (FunctionAST& f : moduleAST) {
       mlirGen(f);
+    }
 
     // Verify the module after we have finished constructing it, this will check
     // the structural properties of the IR and invoke any specific verifiers we
@@ -96,6 +102,9 @@ private:
   /// added to the mapping. When the processing of a function is terminated, the
   /// scope is destroyed and the mappings created in this scope are dropped.
   llvm::ScopedHashTable<StringRef, mlir::Value> symbolTable;
+  llvm::ScopedHashTable<StringRef, mlir::Value> cachedIndexVals;
+
+  std::unordered_map<std::string, mlir::toy::FuncOp> funcOps;
 
   /// Helper conversion for a Toy AST location to an MLIR location.
   mlir::Location loc(const Location &loc) {
@@ -114,7 +123,7 @@ private:
 
   /// Create the prototype for an MLIR function with as many arguments as the
   /// provided Toy AST prototype.
-  FuncOp mlirGen(PrototypeAST &proto) {
+  mlir::toy::FuncOp mlirGen(PrototypeAST &proto) {
     auto location = loc(proto.loc());
 
     // This is a generic function, the return type will be inferred later.
@@ -124,17 +133,18 @@ private:
       argTypes.push_back(getType(arg->getType()));
     }
     auto funcType = builder.getFunctionType(argTypes, {});
-    return builder.create<FuncOp>(location, proto.getName(), funcType);
+    return builder.create<mlir::toy::FuncOp>(location, proto.getName(), funcType);
   }
 
   /// Emit a new function and add it to the MLIR module.
-  FuncOp mlirGen(FunctionAST &funcAST) {
+  mlir::toy::FuncOp mlirGen(FunctionAST &funcAST) {
     // Create a scope in the symbol table to hold variable declarations.
     ScopedHashTableScope<llvm::StringRef, mlir::Value> varScope(symbolTable);
+    ScopedHashTableScope<llvm::StringRef, mlir::Value> idxScope(cachedIndexVals);
 
     // Create an MLIR function for the given prototype.
     builder.setInsertionPointToEnd(theModule.getBody());
-    FuncOp function = mlirGen(*funcAST.getProto());
+    mlir::toy::FuncOp function = mlirGen(*funcAST.getProto());
     if (!function)
       return nullptr;
 
@@ -144,8 +154,9 @@ private:
     // Declare all the function arguments in the symbol table.
     auto protoArgs = funcAST.getProto()->getArgs();
     for (const auto nameValue : llvm::zip(protoArgs, entryBlock.getArguments())) {
-      if (failed(declare(std::get<0>(nameValue)->getName(),
-                         std::get<1>(nameValue))))
+      auto argName = std::get<0>(nameValue)->getName();
+      llvm::outs() << "Registering arg " << argName << "\n";
+      if (failed(declare(argName, std::get<1>(nameValue))))
         return nullptr;
     }
 
@@ -153,6 +164,51 @@ private:
     // body, it will be used throughout the codegen to create operations in this
     // function.
     builder.setInsertionPointToStart(&entryBlock);
+
+    // Tie tensors' shapes
+    for (const auto& arg : protoArgs) {
+      const auto& argName = arg->getName();
+      const auto& argType = arg->getType();
+      if (argType.isTensor() && argType.hasDynamicDim()) {
+        const auto& argVal = symbolTable.lookup(argName);
+        assert(!!argVal && "The arg was not registered to symbolTable");
+
+        SmallVector<mlir::Value> dims;
+        for (const auto& dim : argType.shape) {
+          mlir::Value dimVal;
+          if (dim.isStatic()) {
+            std::string name = "%c" + std::to_string(dim.getValue());
+            const auto& nameAttr = builder.getStringAttr(name.c_str());
+            if (auto cachedDimVal = cachedIndexVals.lookup(nameAttr.getValue())) {
+              dimVal = cachedDimVal;
+            } else {
+              dimVal = builder.create<arith::ConstantIndexOp>(
+                                        argVal.getLoc(), dim.getValue());
+              cachedIndexVals.insert(nameAttr.getValue(), dimVal);
+            }
+          } else {
+            if (auto cachedDimVal = cachedIndexVals.lookup(dim.getId())) {
+              dimVal = cachedDimVal;
+            } else {
+              dimVal = symbolTable.lookup(dim.getId());
+              assert(!!dimVal && "The id was not registered to symbolTable");
+              if (!mlir::isa<mlir::IndexType>(dimVal.getType())) {
+                dimVal = builder.create<arith::IndexCastOp>(
+                                        dimVal.getLoc(), builder.getIndexType(), dimVal);
+                cachedIndexVals.insert(dim.getId(), dimVal);
+              }
+            }
+          }
+
+          dims.push_back(dimVal);
+        }
+
+        mlir::Value newArgVal = builder.create<mlir::toy::TieDimsOp>(
+                                    argVal.getLoc(), argVal.getType(), argVal, dims);
+        symbolTable.insert(argName, newArgVal);
+      }
+    }
+
 
     // Emit the body of the function.
     if (mlir::failed(mlirGen(*funcAST.getBody()))) {
@@ -168,15 +224,48 @@ private:
       returnOp = dyn_cast<mlir::toy::ReturnOp>(entryBlock.back());
 
     if (!returnOp) {
-      builder.create<mlir::toy::ReturnOp>(loc(funcAST.getProto()->loc()));
-    } else if (returnOp.getOperands().size() > 0) {
+      mlir::Value funcRetVal = symbolTable.lookup(function.getSymName());
+      if (!!funcRetVal) {
+        returnOp = builder.create<mlir::toy::ReturnOp>(loc(funcAST.getProto()->loc()), funcRetVal);
+      } else {
+        returnOp = builder.create<mlir::toy::ReturnOp>(loc(funcAST.getProto()->loc()));
+      }
+    }
+
+    if (returnOp.getOperands().size() > 0) {
       // Otherwise, if this return operation has an operand then add a result to
       // the function.
       function.setType(builder.getFunctionType(
-          function.getFunctionType().getInputs(), getType(VarType{})));
+          function.getFunctionType().getInputs(), returnOp.getInput().getType()));
     }
 
+    funcOps.insert({function.getSymName().str(), function});
+
     return function;
+  }
+
+  /// Emit a add expression. It emits specific operations for builtin:
+  /// print(x).
+  mlir::Value mlirGen(PrintExprAST &call) {
+    auto arg = call.getArg();
+    auto argVal = mlirGen(*arg);
+    if (!argVal)
+      return nullptr;
+
+    auto v = builder.create<mlir::toy::PrintOp>(loc(call.loc()), builder.getI64Type(), argVal);
+    return v;
+  }
+
+  // Emit a F32 number
+  mlir::Value mlirGen(NumberExprAST &expr) {
+    auto v = expr.getValue();
+    if (expr.getType() == Type::I32) {
+      return builder.create<mlir::toy::ConstantOp>(loc(expr.loc()), int32_t(v));
+    } else if (expr.getType() == Type::F32) {
+      return builder.create<mlir::toy::ConstantOp>(loc(expr.loc()), float(v));
+    } else {
+      return nullptr;
+    }
   }
 
   /// Emit a binary operation
@@ -209,6 +298,7 @@ private:
     int64_t size = -1;
     auto lhsType = cast<mlir::RankedTensorType>(lhs.getType());
     auto rhsType = cast<mlir::RankedTensorType>(rhs.getType());
+    assert(lhsType == rhsType && "argument types mismatch");
     if (lhsType.hasStaticShape() && rhsType.hasStaticShape()) {
       assert(lhsType.getNumElements() == rhsType.getNumElements() && "argument types mismatch");
       size = lhsType.getNumElements();
@@ -218,11 +308,11 @@ private:
     // support '+' and '*'.
     switch (binop.getOp()) {
     case '+':
-      if (size > 0) {
-        // auto sizeVal = builder.create<ConstantOp>(location, size);
-        return builder.create<AddOp>(location, lhs, rhs, size);
-      }
-      emitError(location, "binary operator '") << binop.getOp() << "'" << " argument types mismatch";
+      // if (size > 0) {
+      //   // auto sizeVal = builder.create<mlir::toy::ConstantOp>(location, size);
+      // }
+      // emitError(location, "binary operator '") << binop.getOp() << "'" << " argument types mismatch";
+      return builder.create<mlir::toy::AddOp>(location, lhsType, lhs, rhs);
     default:
       emitError(location, "invalid binary operator '") << binop.getOp() << "'";
       return nullptr; 
@@ -234,15 +324,17 @@ private:
     auto location = loc(ret.loc());
 
     // 'return' takes an optional expression, handle that case here.
-    mlir::Value expr = nullptr;
-    if (ret.getExpr().has_value()) {
-      if (!(expr = mlirGen(*ret.getExpr().value())))
-        return mlir::failure();
+    if (!ret.getExpr().has_value()) {
+      return mlir::failure();
     }
 
-    // Otherwise, this return operation has zero operands.
-    // builder.create<ReturnOp>(location, expr ? llvm::ArrayRef(expr)
-    //                                         : llvm::ArrayRef<mlir::Value>());
+    mlir::Value expr = mlirGen(*ret.getExpr().value());
+    if (!expr) {
+      return mlir::failure();
+    }
+
+    // Otherwise, create mlir::toy::ReturnOp
+    builder.create<mlir::toy::ReturnOp>(location, expr);
     return mlir::success();
   }
 
@@ -267,9 +359,14 @@ private:
 
     auto& dst = *cast<VariableExprAST>(expr.getDst());
     if (auto dstVal = symbolTable.lookup(dst.getName())) {
-      // auto dataType = cast<mlir::RankedTensorType>(dstVal.getType());
-      builder.create<mlir::toy::StoreOp>(loc(dst.loc()), srcVal, dstVal);
-      return dstVal;
+      auto dataType = cast<mlir::RankedTensorType>(dstVal.getType());
+      auto storeOp = builder.create<mlir::toy::StoreOp>(loc(dst.loc()), dataType, srcVal, dstVal);
+      mlir::Value storeVal = storeOp.getResult();
+      if (auto funcOp = storeOp->getParentOfType<mlir::toy::FuncOp>()) {
+        symbolTable.insert(funcOp.getSymName(), storeVal);
+      }
+
+      return storeVal;
     }
 
     emitError(loc(expr.loc()), "error: unknown variable '")
@@ -277,7 +374,7 @@ private:
     return nullptr;
   }
 
-  /// Emit a add expression. It emits specific operations for two builtins:
+  /// Emit a add expression. It emits specific operations for builtin:
   /// add(x, y, n) and print(x).
   mlir::Value mlirGen(AddExprAST &call) {
     SmallVector<mlir::Value> argVals;
@@ -289,8 +386,63 @@ private:
       argVals.push_back(val);
     }
 
-    auto v = builder.create<AddOp>(loc(call.loc()), mlir::TypeRange{argVals[0].getType()}, argVals);
+    auto v = builder.create<mlir::toy::AddOp>(loc(call.loc()), mlir::TypeRange{argVals[0].getType()}, argVals);
     return v;
+  }
+
+  /// Emit a add expression. It emits specific operations for builtin:
+  /// max(x, y).
+  mlir::Value mlirGen(MaxExprAST &call) {
+    SmallVector<mlir::Value> argVals;
+    for (auto& arg : call.getArgs()) {
+      auto val = mlirGen(*arg);
+      if (!val)
+        return nullptr;
+
+      argVals.push_back(val);
+    }
+
+    auto v = builder.create<mlir::toy::MaxOp>(loc(call.loc()), mlir::TypeRange{argVals[0].getType()}, argVals);
+    return v;
+  }
+
+  /// Emit a add expression. It emits specific operations for builtin:
+  /// random(t).
+  mlir::Value mlirGen(RandomExprAST &call) {
+    const auto& args = call.getArgs();
+    auto& arg0 = *args[0];
+    if (arg0.getKind() != ExprAST::Expr_Var) {
+      return nullptr;
+    } 
+
+    auto& varExpr = cast<VariableExprAST>(arg0);
+    auto val = symbolTable.lookup(varExpr.getName());
+    assert(!!val && "The variable is not found!");
+    auto newVal = builder.create<mlir::toy::RandomOp>(
+                      loc(call.loc()), mlir::TypeRange{val.getType()}, val);
+
+    // Replace the old value
+    symbolTable.insert(varExpr.getName(), newVal);
+
+    return newVal;
+  }
+
+  /// Emit a add expression. It emits specific operations for builtin:
+  /// a call to a user-defined function
+  mlir::Value mlirGen(CallExprAST &call) {
+    SmallVector<mlir::Value> argVals;
+    for (auto& arg : call.getArgs()) {
+      auto val = mlirGen(*arg);
+      if (!val)
+        return nullptr;
+
+      argVals.push_back(val);
+    }
+
+    auto calleeSym = mlir::FlatSymbolRefAttr::get(builder.getStringAttr(call.getCallee()));
+    auto callee = funcOps.at(call.getCallee().str());
+    auto callOp = builder.create<mlir::toy::CallOp>(loc(call.loc()), callee.getFunctionType().getResults(), calleeSym, argVals);
+    return callOp.getResult(0);
   }
 
   /// Recursive helper function to accumulate the data that compose an array
@@ -312,54 +464,95 @@ private:
     data.push_back(cast<NumberExprAST>(expr).getValue());
   }
 
-  /// Dispatch codegen for the right expression subclass using RTTI.
-  mlir::Value mlirGen(ExprAST &expr) {
-    switch (expr.getKind()) {
-    case ExprAST::Expr_Var:
-      return mlirGen(cast<VariableExprAST>(expr));
-    case ExprAST::Expr_AssignOp:
-      return mlirGen(cast<AssignExprAST>(expr));
-    case ExprAST::Expr_BinOp:
-      return mlirGen(cast<BinaryExprAST>(expr));
-    case ExprAST::Expr_Add:
-      return mlirGen(cast<AddExprAST>(expr));
-    case ExprAST::Expr_Literal:
-      return mlirGen(cast<LiteralExprAST>(expr));
-    case ExprAST::Expr_Num:
-      return mlirGen(cast<NumberExprAST>(expr));
-    default:
-      emitError(loc(expr.loc()))
-          << "MLIR codegen encountered an unhandled expr kind '"
-          << Twine(expr.getKind()) << "'";
-      return nullptr;
-    }
-  }
-
   /// Handle a variable declaration, we'll codegen the expression that forms the
   /// initializer and record the value in the symbol table before returning it.
   /// Future expressions will be able to reference this variable through symbol
   /// table lookup.
   mlir::Value mlirGen(VarDeclExprAST &vardecl) {
+    const auto& type = vardecl.getType();
     auto *init = vardecl.getInitVal();
-    if (!init) {
-      emitError(loc(vardecl.loc()),
-                "missing initializer in variable declaration");
+    if (!init && !type.isTensor()) {
+      emitError(loc(vardecl.loc()), 
+                "The variable is invalid! "
+                "Either an initializer or a tensor type is required.");
       return nullptr;
     }
 
-    mlir::Value value = mlirGen(*init);
-    if (!value)
-      return nullptr;
+    if (!!init) {
+      mlir::Value value;
+      if (init->getKind() != ExprAST::Expr_Num) {
+        value = mlirGen(*init);
+      } else {
+        // init is a NumberExprAST
+        auto numExpr = cast<NumberExprAST>(*init);
+        numExpr.setType(type.type);
+        value = mlirGen(numExpr);
+      }
+
+      // Register the value in the symbol table.
+      if (failed(declare(vardecl.getName(), value))) {
+        return nullptr;
+      }
+
+      return value;
+    }
+
+    // The variable is a tensor
+    SmallVector<mlir::Value> dims;
+    // SmallVector<mlir::Value> dynamicSizes;
+    for (const auto& dim : type.shape) {
+      mlir::Value dimVal;
+      if (dim.isStatic()) {
+        std::string name = "%c" + std::to_string(dim.getValue());
+        const auto& nameAttr = builder.getStringAttr(name.c_str());
+        if (auto cachedDimVal = cachedIndexVals.lookup(nameAttr.getValue())) {
+          dimVal = cachedDimVal;
+        } else {
+          dimVal = builder.create<arith::ConstantIndexOp>(
+                                    loc(vardecl.loc()), dim.getValue());
+          cachedIndexVals.insert(nameAttr.getValue(), dimVal);
+        }
+      } else {
+        if (auto cachedDimVal = cachedIndexVals.lookup(dim.getId())) {
+          dimVal = cachedDimVal;
+        } else {
+          dimVal = symbolTable.lookup(dim.getId());
+          assert(!!dimVal && "The id was not registered to symbolTable");
+          if (!mlir::isa<mlir::IndexType>(dimVal.getType())) {
+            dimVal = builder.create<arith::IndexCastOp>(
+                                    dimVal.getLoc(), builder.getIndexType(), dimVal);
+            cachedIndexVals.insert(dim.getId(), dimVal);
+          }
+        }
+
+        // dynamicSizes.push_back(dimVal);
+      }
+
+      dims.push_back(dimVal);
+    }
+
+    mlir::Value value;
+    auto varLoc = loc(vardecl.loc());
+    value = builder.create<mlir::toy::AllocOp>(
+                            varLoc,
+                            getRankedTensorType(type),
+                            dims);
+
+    // // Tie dimensions to the tensor
+    // value = builder.create<mlir::toy::TieDimsOp>(
+    //                         varLoc, value.getType(), value, dims);
 
     // Register the value in the symbol table.
-    if (failed(declare(vardecl.getName(), value)))
+    if (failed(declare(vardecl.getName(), value))) {
       return nullptr;
+    }
+
     return value;
   }
 
   /// Codegen a list of expression, return failure if one of them hit an error.
   mlir::LogicalResult mlirGen(ExprASTList &blockAST) {
-    ScopedHashTableScope<StringRef, mlir::Value> varScope(symbolTable);
+    // ScopedHashTableScope<StringRef, mlir::Value> varScope(symbolTable);
     for (auto &expr : blockAST) {
       // Specific handling for variable declarations, return statement, and
       // print. These can only appear in block list and not in nested
@@ -381,28 +574,75 @@ private:
   }
 
   /// Build a tensor type from a list of shape dimensions.
-  mlir::Type getType(ArrayRef<int64_t> shape) {
+  mlir::Type getRankedTensorType(const VarType& type) {
     // If the shape is empty, then this type is unranked.
-    if (shape.empty()) {
-      SmallVector<int64_t> shape_vec = {mlir::ShapedType::kDynamic};
-      return mlir::RankedTensorType::get(shape_vec, builder.getF32Type());
+    if (type.shape.empty()) {
+      return mlir::Type();
+    }
+
+    mlir::Type elementType;
+    if (type.element_type == Type::F32) {
+      elementType = builder.getF32Type();
+    } else if (type.element_type == Type::F16) {
+      elementType = builder.getF16Type();
+    } else if (type.element_type == Type::I32) {
+      elementType = builder.getI32Type();
     }
 
     // Otherwise, we use the given shape.
-    return mlir::RankedTensorType::get(shape, builder.getF32Type());
+    SmallVector<int64_t> shape;
+    for (const auto& d : type.shape) {
+      if (d.isStatic()) {
+        shape.push_back(d.getValue());
+      } else {
+        shape.push_back(mlir::ShapedType::kDynamic);
+      }
+    }
+    return mlir::RankedTensorType::get(shape, elementType);
   }
 
   /// Build an MLIR type from a Toy AST variable type (forward to the generic
   /// getType above).
   mlir::Type getType(const VarType &type) { 
     switch (type.type) {
-      case Type::tensor:
-        return getType(type.shape);
-      case Type::integer:
-        return builder.getI64Type();
+      case Type::TENSOR:
+        return getRankedTensorType(type);
+      case Type::I32:
+        return builder.getI32Type();
       default:
         llvm::errs() << "Unknown type\n";
         return nullptr;
+    }
+  }
+
+  /// Dispatch codegen for the right expression subclass using RTTI.
+  mlir::Value mlirGen(ExprAST &expr) {
+    switch (expr.getKind()) {
+    case ExprAST::Expr_Var:
+      return mlirGen(cast<VariableExprAST>(expr));
+    case ExprAST::Expr_Literal:
+      return mlirGen(cast<LiteralExprAST>(expr));
+    case ExprAST::Expr_Num:
+      return mlirGen(cast<NumberExprAST>(expr));
+    case ExprAST::Expr_Print:
+      return mlirGen(cast<PrintExprAST>(expr));
+    case ExprAST::Expr_AssignOp:
+      return mlirGen(cast<AssignExprAST>(expr));
+    case ExprAST::Expr_BinOp:
+      return mlirGen(cast<BinaryExprAST>(expr));
+    case ExprAST::Expr_Add:
+      return mlirGen(cast<AddExprAST>(expr));
+    case ExprAST::Expr_Max:
+      return mlirGen(cast<MaxExprAST>(expr));
+    case ExprAST::Expr_Random:
+      return mlirGen(cast<RandomExprAST>(expr));
+    case ExprAST::Expr_Call:
+      return mlirGen(cast<CallExprAST>(expr));
+    default:
+      emitError(loc(expr.loc()))
+          << "MLIR codegen encountered an unhandled expr kind '"
+          << Twine(expr.getKind()) << "'";
+      return nullptr;
     }
   }
 };
@@ -429,10 +669,6 @@ mlir::OwningOpRef<mlir::ModuleOp> mlirGen(mlir::MLIRContext &context,
 }
 
 } // namespace
-
-namespace toy {
-namespace compiler {
-namespace frontend {
 
 mlir::LogicalResult canonicalize(mlir::ModuleOp module) {
   auto& context = *module.getContext();
@@ -480,7 +716,14 @@ mlir::LogicalResult canonicalize(mlir::ModuleOp module) {
 // The public API for codegen.
 mlir::OwningOpRef<mlir::ModuleOp> getModule(mlir::MLIRContext& context, const std::string& inputFilename) {
   // Load our Dialect in this MLIR Context.
-  context.getOrLoadDialect<mlir::toy::ToyDialect>();
+  mlir::DialectRegistry registry;
+  registry.insert<
+    arith::ArithDialect,
+    mlir::tensor::TensorDialect,
+    mlir::toy::ToyDialect
+  >();
+  context.appendDialectRegistry(registry);
+  context.loadAllAvailableDialects();
 
   // Build a ModuleAST from .toy source file
   auto moduleAST = parseInputFile(inputFilename);

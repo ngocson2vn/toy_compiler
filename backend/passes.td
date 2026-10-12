@@ -27,6 +27,11 @@ def LowerMemRefToLLVMPass : Pass<"lower-memref-to-llvm", "ModuleOp"> {
 }
 
 
+def DumpGPUModulePass : Pass<"dump-gpu-module", "ModuleOp"> {
+  let summary = "Pass to dump GPUModule";
+}
+
+
 def InjectRuntimeCtxPass : Pass<"inject-runtime-ctx", "ModuleOp"> {
   let summary = "Pass to inject runtime context";
 }

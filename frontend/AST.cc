@@ -45,6 +45,8 @@ private:
   void dump(ReturnExprAST *node);
   void dump(AssignExprAST *node);
   void dump(AddExprAST *node);
+  void dump(MaxExprAST *node);
+  void dump(RandomExprAST *node);
   void dump(BinaryExprAST *node);
   void dump(CallExprAST *node);
   void dump(PrintExprAST *node);
@@ -78,14 +80,25 @@ static std::string loc(T *node) {
 /// Dispatch to a generic expressions to the appropriate subclass using RTTI
 void ASTDumper::dump(ExprAST *expr) {
   llvm::TypeSwitch<ExprAST *>(expr)
-      .Case<BinaryExprAST, AssignExprAST, CallExprAST, LiteralExprAST, NumberExprAST,
-            AddExprAST, PrintExprAST, ReturnExprAST, VarDeclExprAST, VariableExprAST>(
-          [&](auto *node) { this->dump(node); })
-      .Default([&](ExprAST *) {
-        // No match, fallback to a generic message
-        INDENT();
-        llvm::errs() << "<unknown Expr, kind " << expr->getKind() << ">\n";
-      });
+    .Case<
+      BinaryExprAST,
+      AssignExprAST,
+      CallExprAST,
+      LiteralExprAST,
+      NumberExprAST,
+      AddExprAST,
+      MaxExprAST,
+      RandomExprAST,
+      PrintExprAST,
+      ReturnExprAST,
+      VarDeclExprAST,
+      VariableExprAST
+    >([&](auto *node) { this->dump(node); })
+    .Default([&](ExprAST *) {
+      // No match, fallback to a generic message
+      INDENT();
+      llvm::errs() << "<unknown Expr, kind " << expr->getKind() << ">\n";
+    });
 }
 
 /// A variable declaration is printing the variable name, the type, and then
@@ -95,7 +108,10 @@ void ASTDumper::dump(VarDeclExprAST *varDecl) {
   llvm::errs() << "VarDecl " << varDecl->getName();
   dump(varDecl->getType());
   llvm::errs() << " " << loc(varDecl) << "\n";
-  dump(varDecl->getInitVal());
+
+  if (!!varDecl->getInitVal()) {
+    dump(varDecl->getInitVal());
+  }
 }
 
 /// A "block", or a list of expression
@@ -180,10 +196,32 @@ void ASTDumper::dump(AssignExprAST *node) {
   dump(node->getSrc());
 }
 
-/// Print an assign operation, first destination, then recurse into source.
+/// Print an add operation, operand1, operand2
 void ASTDumper::dump(AddExprAST *node) {
   INDENT();
   llvm::errs() << "Add [ " << loc(node) << "\n";
+  for (auto& arg : node->getArgs()) {
+    dump(arg.get());
+  }
+  indent();
+  llvm::errs() << "]\n";
+}
+
+/// Print an max operation, operand1, operand2
+void ASTDumper::dump(MaxExprAST *node) {
+  INDENT();
+  llvm::errs() << "Max [ " << loc(node) << "\n";
+  for (auto& arg : node->getArgs()) {
+    dump(arg.get());
+  }
+  indent();
+  llvm::errs() << "]\n";
+}
+
+/// Print an random operation, arg0
+void ASTDumper::dump(RandomExprAST *node) {
+  INDENT();
+  llvm::errs() << "Random [ " << loc(node) << "\n";
   for (auto& arg : node->getArgs()) {
     dump(arg.get());
   }
@@ -213,9 +251,29 @@ void ASTDumper::dump(PrintExprAST *node) {
 
 /// Print type: only the shape is printed in between '<' and '>'
 void ASTDumper::dump(const VarType &type) {
-  llvm::errs() << "<";
-  llvm::interleaveComma(type.shape, llvm::errs());
-  llvm::errs() << ">";
+  llvm::errs() << " : " << type.getTypeName();
+  if (!type.shape.empty()) {
+    const auto& shape = type.shape;
+    const auto& d0 = shape[0];
+    llvm::errs() << "<";
+    if (d0.isStatic()) {
+      llvm::errs() << d0.getValue();
+    } else {
+      llvm::errs() << d0.getId();
+    }
+
+    for (int i = 1; i < shape.size(); i++) {
+      const auto& d = shape[i];
+      if (d.isStatic()) {
+        llvm::errs() << "x" << d.getValue();
+      } else {
+        llvm::errs() << "x" << d.getId();
+      }
+    }
+
+    llvm::errs() << "x" << type.getElemTypeName();
+    llvm::errs() << ">";
+  }
 }
 
 /// Print a function prototype, first the function name, and then the list of

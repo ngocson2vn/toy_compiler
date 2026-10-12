@@ -1,6 +1,10 @@
 include "mlir/IR/OpBase.td"
 include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
+
+include "mlir/IR/BuiltinAttributes.td"
+include "mlir/IR/CommonAttrConstraints.td"
+
 include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
@@ -62,50 +66,149 @@ def Toy_FuncOp : Op<Toy_Dialect, "func", [
   let hasCustomAssemblyFormat = 1;
 }
 
-// def Toy_ConstantOp : Op<Toy_Dialect, "constant"> {
-//   // Provide a summary and description for this operation. This can be used to
-//   // auto-generate documentation of the operations within our dialect.
-//   let summary = "constant";
-//   let description = [{
-//     Constant operation turns a literal into an SSA value. The data is attached
-//     to the operation as an attribute. For example:
+def Toy_CallOp : Op<Toy_Dialect, "call"> {
+  let summary = "Call operation for the toy dialect";
+  let description = [{
+    This operation call a user-defined function.
+  }];
+  let arguments = (ins FlatSymbolRefAttr:$callee, Variadic<AnyType>:$args);
+  let results = (outs Variadic<AnyType>:$results);
 
-//     ```mlir
-//       %0 = toy.constant 42 : i64
-//     ```
-//   }];
+  let assemblyFormat = "$callee `(` $args `)` `:` `(` type($args) `)` attr-dict `->` type($results)";
+}
 
-//   // The constant operation takes an attribute as the only input.
-//   let arguments = (ins AnyTypeOf<[I64, F32]>:$value);
+def Toy_PrintOp : Op<Toy_Dialect, "print"> {
+  let summary = "Print operation for the toy dialect";
+  let description = [{
+    This operation print a number or a tensor.
+  }];
+  let arguments = (ins AnyTypeOf<[I32, F32, F32Tensor, AnyMemRef]>:$arg);
+  let results = (outs I64:$result);
 
-//   // The constant operation returns a single value of TensorType.
-//   let results = (outs AnyTypeOf<[I64, F32]>:$result);
+  let assemblyFormat = "$arg `:` type($arg) attr-dict `->` type($result)";
+}
 
-//   let assemblyFormat = "$value `:` type($value) attr-dict `->` type($result)";
+// def Toy_ConstantOp : Op<Toy_Dialect, "constant", [Pure, AllTypesMatch<["value", "result"]>]> {
+def Toy_ConstantOp : Op<Toy_Dialect, "constant"> {
+  // Provide a summary and description for this operation. This can be used to
+  // auto-generate documentation of the operations within our dialect.
+  let summary = "constant";
+  let description = [{
+    Constant operation turns a literal into an SSA value. The data is attached
+    to the operation as an attribute. For example:
 
-//   let builders = [
-//     OpBuilder<(ins "int64_t":$value)>,
+    ```mlir
+      %0 = toy.constant 42 : i64
+    ```
+  }];
 
-//     OpBuilder<(ins "double":$value)>
-//   ];
-// }
+  // The constant operation takes an attribute as the only input.
+  let arguments = (ins TypedAttrInterface:$value);
+
+  // The constant operation returns a single value of TensorType.
+  let results = (outs AnyType:$result);
+
+  let assemblyFormat = "$value attr-dict `->` type($result)";
+
+  let builders = [
+    OpBuilder<(ins "int32_t":$value), [{
+  auto attr = $_builder.getI32IntegerAttr(value);
+  build($_builder, $_state, attr.getType(), attr);}]>,
+
+    OpBuilder<(ins "float":$value), [{
+  auto attr = $_builder.getF32FloatAttr(value);
+  build($_builder, $_state, attr.getType(), attr);}]>
+  ];
+}
+
+def Toy_TieDimsOp : Op<Toy_Dialect, "tie_dims"> {
+  let summary = "Tie dims operation for the toy dialect";
+  let description = [{
+    This operation tie dims with a tensor.
+  }];
+  let arguments = (ins AnyTypeOf<[F32Tensor, AnyMemRef]>:$arg, Variadic<Index>:$dims);
+  let results = (outs AnyTypeOf<[F32Tensor, AnyMemRef]>:$result);
+
+  let assemblyFormat = "$arg `,` $dims `:` type($arg) `,` type($dims) attr-dict `->` type($result)";
+
+  // let builders = [
+  //   // OpBuilder<(ins "Value":$lhs, "Value":$rhs, "int64_t":$size)>,
+  //   OpBuilder<(ins "Value":$lhs, "ValueRange":$dynamic_dims), [{
+  //     build($_builder, $_state, lhs, dynamic_dims);
+  //   }]>,
+  // ];
+
+  let hasCanonicalizer = 1;
+}
 
 def Toy_AddOp : Op<Toy_Dialect, "add"> {
   let summary = "Addition operation for the toy dialect";
   let description = [{
     This operation computes the sum of two tensors element-wise.
   }];
-  let arguments = (ins F32Tensor:$lhs, F32Tensor:$rhs, I64:$size);
+  let arguments = (ins F32Tensor:$lhs, F32Tensor:$rhs);
   let results = (outs F32Tensor:$result);
 
-  let assemblyFormat = "$lhs `,` $rhs `,` $size `:` type($lhs) `,` type($rhs) `,` type($size) attr-dict `->` type($result)";
+  let assemblyFormat = "$lhs `,` $rhs `:` type($lhs) `,` type($rhs) attr-dict `->` type($result)";
 
-  let builders = [
-    // OpBuilder<(ins "Value":$lhs, "Value":$rhs, "int64_t":$size)>,
-    OpBuilder<(ins "Value":$lhs, "Value":$rhs, "int64_t":$size), [{
-      build($_builder, $_state, lhs, rhs, size);
-    }]>,
-  ];
+  // let builders = [
+  //   // OpBuilder<(ins "Value":$lhs, "Value":$rhs, "int64_t":$size)>,
+  //   OpBuilder<(ins "Value":$lhs, "Value":$rhs), [{
+  //     build($_builder, $_state, lhs, rhs);
+  //   }]>,
+  // ];
+}
+
+def Toy_MaxOp : Op<Toy_Dialect, "max"> {
+  let summary = "Maximum operation for the toy dialect";
+  let description = [{
+    This operation computes the maximum of two tensors element-wise.
+  }];
+  let arguments = (ins F32Tensor:$lhs, AnyTypeOf<[F32Tensor, F32]>:$rhs);
+  let results = (outs F32Tensor:$result);
+
+  let assemblyFormat = "$lhs `,` $rhs `:` type($lhs) `,` type($rhs) attr-dict `->` type($result)";
+
+  // let builders = [
+  //   // OpBuilder<(ins "Value":$lhs, "Value":$rhs, "int64_t":$size)>,
+  //   OpBuilder<(ins "Value":$lhs, "Value":$rhs), [{
+  //     build($_builder, $_state, lhs, rhs);
+  //   }]>,
+  // ];
+}
+
+def Toy_AllocOp : Op<Toy_Dialect, "alloc"> {
+  let summary = "Alloc operation for the toy dialect";
+  let description = [{
+    This operation generates random elements for a tensor.
+  }];
+  let arguments = (ins Variadic<Index>:$dims);
+  let results = (outs AnyTypeOf<[F32Tensor, AnyMemRef]>:$result);
+
+  let assemblyFormat = "$dims `:` attr-dict `->` type($result)";
+
+  // // Provide extra utility definitions on the c++ operation class definition.
+  // let extraClassDeclaration = [{
+  //   MemRefType getMemRefType() { 
+  //     auto type = getType();
+  //     if (isa<MemRefType>(type)) {
+  //       return cast<MemRefType>(type);
+  //     }
+
+  //     return nullptr;
+  //   }
+  // }];
+}
+
+def Toy_RandomOp : Op<Toy_Dialect, "random"> {
+  let summary = "Random operation for the toy dialect";
+  let description = [{
+    This operation generates random elements for a tensor.
+  }];
+  let arguments = (ins AnyTypeOf<[F32Tensor, AnyMemRef]>:$arg);
+  let results = (outs AnyTypeOf<[F32Tensor, AnyMemRef]>:$result);
+
+  let assemblyFormat = "$arg `:` type($arg) attr-dict `->` type($result)";
 }
 
 def Toy_StoreOp : Op<Toy_Dialect, "store"> {
@@ -114,8 +217,9 @@ def Toy_StoreOp : Op<Toy_Dialect, "store"> {
     This operation store source tensor into destination tensor.
   }];
   let arguments = (ins F32Tensor:$src, F32Tensor:$dst);
+  let results = (outs F32Tensor:$result);
 
-  let assemblyFormat = "$src `,` $dst `:` type($src) `,` type($dst) attr-dict";
+  let assemblyFormat = "$src `,` $dst `:` type($src) `,` type($dst) attr-dict `->` type($result)";
 }
 
 def Toy_ReturnOp : Op<Toy_Dialect, "return", [HasParent<"FuncOp">, Terminator]> {

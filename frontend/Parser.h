@@ -24,6 +24,8 @@
 #include <map>
 #include <utility>
 #include <vector>
+#include <unordered_map>
+#include <functional>
 
 namespace toy {
 namespace compiler {
@@ -37,7 +39,39 @@ namespace frontend {
 class Parser {
 public:
   /// Create a Parser for the supplied lexer.
-  Parser(Lexer &lexer) : lexer(lexer) {}
+  Parser(Lexer &lexer) : lexer(lexer) {
+    opFunctions["print"] = [this](Location& loc, std::vector<std::unique_ptr<ExprAST>>& args) 
+                              -> std::unique_ptr<ExprAST> {
+      if (args.size() != 1)
+        return parseError<ExprAST>("<single arg>", "as argument to print()");
+
+      return std::make_unique<PrintExprAST>(std::move(loc), std::move(args[0]));
+    };
+
+    opFunctions["add"] = [this](Location& loc, std::vector<std::unique_ptr<ExprAST>>& args) 
+                              -> std::unique_ptr<ExprAST> {
+      if (args.size() != 2)
+        return parseError<ExprAST>("<2 args>", "as arguments to add()");
+
+      return std::make_unique<AddExprAST>(std::move(loc), std::move(args));
+    };
+
+    opFunctions["max"] = [this](Location& loc, std::vector<std::unique_ptr<ExprAST>>& args) 
+                              -> std::unique_ptr<ExprAST> {
+      if (args.size() != 2)
+        return parseError<ExprAST>("<2 args>", "as arguments to max()");
+      
+      return std::make_unique<MaxExprAST>(std::move(loc), std::move(args));
+    };
+
+    opFunctions["random"] = [this](Location& loc, std::vector<std::unique_ptr<ExprAST>>& args) 
+                              -> std::unique_ptr<ExprAST> {
+      if (args.size() != 1)
+        return parseError<ExprAST>("<1 args>", "as arguments to random()");
+      
+      return std::make_unique<RandomExprAST>(std::move(loc), std::move(args));
+    };
+  }
 
   /// Parse a full Module. A module is a list of function definitions.
   std::unique_ptr<ModuleAST> parseModule() {
@@ -59,6 +93,8 @@ public:
 
 private:
   Lexer &lexer;
+  using OpFn = std::function<std::unique_ptr<ExprAST>(Location&, std::vector<std::unique_ptr<ExprAST>>&)>;
+  std::unordered_map<std::string, OpFn> opFunctions;
 
   /// Parse a return statement.
   /// return :== return ; | return expr ;
@@ -80,8 +116,10 @@ private:
   /// numberexpr ::= number
   std::unique_ptr<ExprAST> parseNumberExpr() {
     auto loc = lexer.getLastLocation();
+    Type type = Type::F32;
+
     auto result =
-        std::make_unique<NumberExprAST>(std::move(loc), lexer.getValue());
+        std::make_unique<NumberExprAST>(std::move(loc), type, lexer.getValue());
     lexer.consume(tok_number);
     return std::move(result);
   }
@@ -210,18 +248,8 @@ private:
     lexer.consume(Token(')'));
 
     // It can be a builtin call to print
-    if (name == "print") {
-      if (args.size() != 1)
-        return parseError<ExprAST>("<single arg>", "as argument to print()");
-
-      return std::make_unique<PrintExprAST>(std::move(loc), std::move(args[0]));
-    }
-
-    if (name == "add") {
-      if (args.size() != 3)
-        return parseError<ExprAST>("<3 args>", "as arguments to add()");
-      
-      return std::make_unique<AddExprAST>(std::move(loc), std::move(args));
+    if (opFunctions.count(name)) {
+      return opFunctions[name](loc, args);
     }
 
     // Call to a user-defined function
@@ -303,6 +331,30 @@ private:
     return parseBinOpRHS(0, std::move(lhs));
   }
 
+  std::vector<std::string> split(const std::string& str, const std::string& delimiter) {
+    std::vector<std::string> ret_vec;
+    std::size_t slen = str.size();
+    std::size_t dlen = delimiter.size();
+    std::size_t spos = 0;
+    auto cpos = str.find(delimiter, spos);
+    while (cpos != std::string::npos) {
+      auto len = cpos - spos;
+      if (len > 0) {
+        ret_vec.push_back(str.substr(spos, len));
+      }
+
+      spos = cpos + dlen;
+      cpos = str.find(delimiter, spos);
+    }
+
+    auto len = slen - spos;
+    if (len > 0) {
+      ret_vec.push_back(str.substr(spos, len));
+    }
+
+    return ret_vec;
+  }
+
   /// type ::= < shape_list >
   /// shape_list ::= num | num , shape_list
   std::unique_ptr<VarType> parseType() {
@@ -312,9 +364,9 @@ private:
     auto type = std::make_unique<VarType>();
     auto id = lexer.getId();
     if (id == "tensor") {
-      type->type = Type::tensor;
+      type->type = Type::TENSOR;
     } else if (id == "int") {
-      type->type = Type::integer;
+      type->type = Type::I32;
     } else {
       return parseError<VarType>("type identifier", "tensor or int");
     }
@@ -326,11 +378,38 @@ private:
 
     lexer.getNextToken(); // eat <
 
-    while (lexer.getCurToken() == tok_number) {
-      type->shape.push_back(lexer.getValue());
+    while (lexer.getCurToken() == tok_number || lexer.getCurToken() == tok_identifier) {
+      if (lexer.getCurToken() == tok_number) {
+        type->shape.push_back(lexer.getValue());
+      } else if (lexer.getCurToken() == tok_identifier) {
+        auto dim_vec = split(lexer.getId().str(), "x");
+        if (dim_vec.empty()) {
+          return parseError<VarType>("an identifier", "to be a dynamic dim size");
+        }
+
+        for (int i = 0; i < dim_vec.size() - 1; i++) {
+          const auto& dim = dim_vec[i];
+          if (isdigit(dim[0])) {
+            auto numVal = strtod(dim.c_str(), nullptr);
+            type->shape.push_back(numVal);
+          } else {
+            type->shape.push_back(dim);
+          }
+        }
+
+        const auto& elem_type_name = dim_vec.back();
+        if (elem_type_name == type::name::F32) {
+          type->element_type = Type::F32;
+        } else if (elem_type_name == type::name::F16) {
+          type->element_type = Type::F16;
+        } else if (elem_type_name == type::name::I32) {
+          type->element_type = Type::I32;
+        } else {
+          return parseError<VarType>("<f32|f16|i32>", "to be element type name");
+        }
+      }
+
       lexer.getNextToken();
-      if (lexer.getCurToken() == ',')
-        lexer.getNextToken();
     }
 
     if (lexer.getCurToken() != '>')
@@ -356,7 +435,8 @@ private:
     lexer.getNextToken(); // eat id
 
     std::unique_ptr<VarType> type; // Type is optional, it can be inferred
-    if (lexer.getCurToken() == '<') {
+    if (lexer.getCurToken() == ':') {
+      lexer.getNextToken(); // eat :
       type = parseType();
       if (!type)
         return nullptr;
@@ -364,8 +444,13 @@ private:
 
     if (!type)
       type = std::make_unique<VarType>();
-    lexer.consume(Token('='));
-    auto expr = parseExpression();
+    
+    std::unique_ptr<ExprAST> expr;
+    if (lexer.getCurToken() == '=') {
+      lexer.consume(Token('='));
+      expr = parseExpression();
+    }
+
     return std::make_unique<VarDeclExprAST>(std::move(loc), std::move(id),
                                             std::move(*type), std::move(expr));
   }

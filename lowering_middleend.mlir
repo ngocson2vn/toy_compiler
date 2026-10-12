@@ -1,40 +1,252 @@
 // -----// IR Dump After ConvertToyToStdPass (convert-toy-to-std) ('builtin.module' operation) //----- //
 module {
-  func.func @add_two_vectors(%arg0: tensor<?xf32>, %arg1: tensor<?xf32>, %arg2: tensor<?xf32>, %arg3: i64) {
-    %0 = toy.add %arg0, %arg1, %arg3 : tensor<?xf32>, tensor<?xf32>, i64 -> tensor<?xf32>
-    toy.store %0, %arg2 : tensor<?xf32>, tensor<?xf32>
-    return
+  func.func @add_two_vectors(%arg0: tensor<?xf32>, %arg1: tensor<?xf32>, %arg2: tensor<?xf32>, %arg3: i32) -> tensor<?xf32> {
+    %0 = arith.index_cast %arg3 : i32 to index
+    %1 = toy.tie_dims %arg0, %0 : tensor<?xf32>, index -> tensor<?xf32>
+    %2 = toy.tie_dims %arg1, %0 : tensor<?xf32>, index -> tensor<?xf32>
+    %3 = toy.tie_dims %arg2, %0 : tensor<?xf32>, index -> tensor<?xf32>
+    %4 = toy.add %1, %2 : tensor<?xf32>, tensor<?xf32> -> tensor<?xf32>
+    %5 = toy.store %4, %3 : tensor<?xf32>, tensor<?xf32> -> tensor<?xf32>
+    return %5 : tensor<?xf32>
+  }
+}
+
+
+// -----// IR Dump After ConvertToyToLinalgPass (convert-toy-to-linalg) ('builtin.module' operation) //----- //
+#map = affine_map<(d0) -> (d0)>
+module {
+  func.func @add_two_vectors(%arg0: tensor<?xf32>, %arg1: tensor<?xf32>, %arg2: tensor<?xf32>, %arg3: i32) -> tensor<?xf32> {
+    %0 = arith.index_cast %arg3 : i32 to index
+    %1 = toy.tie_dims %arg0, %0 : tensor<?xf32>, index -> tensor<?xf32>
+    %2 = toy.tie_dims %arg1, %0 : tensor<?xf32>, index -> tensor<?xf32>
+    %3 = toy.tie_dims %arg2, %0 : tensor<?xf32>, index -> tensor<?xf32>
+    %c0 = arith.constant 0 : index
+    %dim = tensor.dim %1, %c0 : tensor<?xf32>
+    %4 = tensor.empty(%dim) : tensor<?xf32>
+    %5 = linalg.generic {indexing_maps = [#map, #map, #map], iterator_types = ["parallel"]} ins(%1, %2 : tensor<?xf32>, tensor<?xf32>) outs(%4 : tensor<?xf32>) {
+    ^bb0(%in: f32, %in_0: f32, %out: f32):
+      %8 = arith.addf %in, %in_0 : f32
+      linalg.yield %8 : f32
+    } -> tensor<?xf32>
+    %6 = linalg.generic {indexing_maps = [#map, #map, #map], iterator_types = ["parallel"]} ins(%1, %2 : tensor<?xf32>, tensor<?xf32>) outs(%3 : tensor<?xf32>) {
+    ^bb0(%in: f32, %in_0: f32, %out: f32):
+      %8 = arith.addf %in, %in_0 : f32
+      linalg.yield %8 : f32
+    } -> tensor<?xf32>
+    %7 = bufferization.materialize_in_destination %6 in %3 : (tensor<?xf32>, tensor<?xf32>) -> tensor<?xf32>
+    return %7 : tensor<?xf32>
+  }
+}
+
+
+// -----// IR Dump After Canonicalizer (canonicalize) ('builtin.module' operation) //----- //
+#map = affine_map<(d0) -> (d0)>
+module {
+  func.func @add_two_vectors(%arg0: tensor<?xf32>, %arg1: tensor<?xf32>, %arg2: tensor<?xf32>, %arg3: i32) -> tensor<?xf32> {
+    %0 = arith.index_cast %arg3 : i32 to index
+    %1 = toy.tie_dims %arg0, %0 : tensor<?xf32>, index -> tensor<?xf32>
+    %2 = toy.tie_dims %arg1, %0 : tensor<?xf32>, index -> tensor<?xf32>
+    %3 = toy.tie_dims %arg2, %0 : tensor<?xf32>, index -> tensor<?xf32>
+    %4 = linalg.generic {indexing_maps = [#map, #map, #map], iterator_types = ["parallel"]} ins(%1, %2 : tensor<?xf32>, tensor<?xf32>) outs(%3 : tensor<?xf32>) {
+    ^bb0(%in: f32, %in_0: f32, %out: f32):
+      %6 = arith.addf %in, %in_0 : f32
+      linalg.yield %6 : f32
+    } -> tensor<?xf32>
+    %5 = bufferization.materialize_in_destination %4 in %3 : (tensor<?xf32>, tensor<?xf32>) -> tensor<?xf32>
+    return %5 : tensor<?xf32>
+  }
+}
+
+
+// -----// IR Dump After LinalgElementwiseOpFusionPass (linalg-fuse-elementwise-ops) ('builtin.module' operation) //----- //
+#map = affine_map<(d0) -> (d0)>
+module {
+  func.func @add_two_vectors(%arg0: tensor<?xf32>, %arg1: tensor<?xf32>, %arg2: tensor<?xf32>, %arg3: i32) -> tensor<?xf32> {
+    %c0 = arith.constant 0 : index
+    %0 = arith.index_cast %arg3 : i32 to index
+    %1 = toy.tie_dims %arg0, %0 : tensor<?xf32>, index -> tensor<?xf32>
+    %2 = toy.tie_dims %arg1, %0 : tensor<?xf32>, index -> tensor<?xf32>
+    %3 = toy.tie_dims %arg2, %0 : tensor<?xf32>, index -> tensor<?xf32>
+    %dim = tensor.dim %3, %c0 : tensor<?xf32>
+    %4 = tensor.empty(%dim) : tensor<?xf32>
+    %5 = linalg.generic {indexing_maps = [#map, #map, #map], iterator_types = ["parallel"]} ins(%1, %2 : tensor<?xf32>, tensor<?xf32>) outs(%4 : tensor<?xf32>) {
+    ^bb0(%in: f32, %in_0: f32, %out: f32):
+      %7 = arith.addf %in, %in_0 : f32
+      linalg.yield %7 : f32
+    } -> tensor<?xf32>
+    %6 = bufferization.materialize_in_destination %5 in %3 : (tensor<?xf32>, tensor<?xf32>) -> tensor<?xf32>
+    return %6 : tensor<?xf32>
+  }
+}
+
+
+// -----// IR Dump After Canonicalizer (canonicalize) ('builtin.module' operation) //----- //
+#map = affine_map<(d0) -> (d0)>
+module {
+  func.func @add_two_vectors(%arg0: tensor<?xf32>, %arg1: tensor<?xf32>, %arg2: tensor<?xf32>, %arg3: i32) -> tensor<?xf32> {
+    %0 = arith.index_cast %arg3 : i32 to index
+    %1 = toy.tie_dims %arg0, %0 : tensor<?xf32>, index -> tensor<?xf32>
+    %2 = toy.tie_dims %arg1, %0 : tensor<?xf32>, index -> tensor<?xf32>
+    %3 = toy.tie_dims %arg2, %0 : tensor<?xf32>, index -> tensor<?xf32>
+    %4 = tensor.empty(%0) : tensor<?xf32>
+    %5 = linalg.generic {indexing_maps = [#map, #map, #map], iterator_types = ["parallel"]} ins(%1, %2 : tensor<?xf32>, tensor<?xf32>) outs(%4 : tensor<?xf32>) {
+    ^bb0(%in: f32, %in_0: f32, %out: f32):
+      %7 = arith.addf %in, %in_0 : f32
+      linalg.yield %7 : f32
+    } -> tensor<?xf32>
+    %6 = bufferization.materialize_in_destination %5 in %3 : (tensor<?xf32>, tensor<?xf32>) -> tensor<?xf32>
+    return %6 : tensor<?xf32>
+  }
+}
+
+
+// -----// IR Dump After EmptyTensorEliminationPass (eliminate-empty-tensors) ('builtin.module' operation) //----- //
+#map = affine_map<(d0) -> (d0)>
+module {
+  func.func @add_two_vectors(%arg0: tensor<?xf32>, %arg1: tensor<?xf32>, %arg2: tensor<?xf32>, %arg3: i32) -> tensor<?xf32> {
+    %0 = arith.index_cast %arg3 : i32 to index
+    %1 = toy.tie_dims %arg0, %0 : tensor<?xf32>, index -> tensor<?xf32>
+    %2 = toy.tie_dims %arg1, %0 : tensor<?xf32>, index -> tensor<?xf32>
+    %3 = toy.tie_dims %arg2, %0 : tensor<?xf32>, index -> tensor<?xf32>
+    %4 = tensor.empty(%0) : tensor<?xf32>
+    %5 = linalg.generic {indexing_maps = [#map, #map, #map], iterator_types = ["parallel"]} ins(%1, %2 : tensor<?xf32>, tensor<?xf32>) outs(%3 : tensor<?xf32>) {
+    ^bb0(%in: f32, %in_0: f32, %out: f32):
+      %7 = arith.addf %in, %in_0 : f32
+      linalg.yield %7 : f32
+    } -> tensor<?xf32>
+    %6 = bufferization.materialize_in_destination %5 in %3 : (tensor<?xf32>, tensor<?xf32>) -> tensor<?xf32>
+    return %6 : tensor<?xf32>
+  }
+}
+
+
+// -----// IR Dump After FoldMaterializeInDestinationOpPass (fold-materialize-in-destination-op) ('builtin.module' operation) //----- //
+#map = affine_map<(d0) -> (d0)>
+module {
+  func.func @add_two_vectors(%arg0: tensor<?xf32>, %arg1: tensor<?xf32>, %arg2: tensor<?xf32>, %arg3: i32) -> tensor<?xf32> {
+    %0 = arith.index_cast %arg3 : i32 to index
+    %1 = toy.tie_dims %arg0, %0 : tensor<?xf32>, index -> tensor<?xf32>
+    %2 = toy.tie_dims %arg1, %0 : tensor<?xf32>, index -> tensor<?xf32>
+    %3 = toy.tie_dims %arg2, %0 : tensor<?xf32>, index -> tensor<?xf32>
+    %4 = tensor.empty(%0) : tensor<?xf32>
+    %5 = linalg.generic {indexing_maps = [#map, #map, #map], iterator_types = ["parallel"]} ins(%1, %2 : tensor<?xf32>, tensor<?xf32>) outs(%3 : tensor<?xf32>) {
+    ^bb0(%in: f32, %in_0: f32, %out: f32):
+      %6 = arith.addf %in, %in_0 : f32
+      linalg.yield %6 : f32
+    } -> tensor<?xf32>
+    return %5 : tensor<?xf32>
+  }
+}
+
+
+// -----// IR Dump After Canonicalizer (canonicalize) ('builtin.module' operation) //----- //
+#map = affine_map<(d0) -> (d0)>
+module {
+  func.func @add_two_vectors(%arg0: tensor<?xf32>, %arg1: tensor<?xf32>, %arg2: tensor<?xf32>, %arg3: i32) -> tensor<?xf32> {
+    %0 = arith.index_cast %arg3 : i32 to index
+    %1 = toy.tie_dims %arg0, %0 : tensor<?xf32>, index -> tensor<?xf32>
+    %2 = toy.tie_dims %arg1, %0 : tensor<?xf32>, index -> tensor<?xf32>
+    %3 = toy.tie_dims %arg2, %0 : tensor<?xf32>, index -> tensor<?xf32>
+    %4 = linalg.generic {indexing_maps = [#map, #map, #map], iterator_types = ["parallel"]} ins(%1, %2 : tensor<?xf32>, tensor<?xf32>) outs(%3 : tensor<?xf32>) {
+    ^bb0(%in: f32, %in_0: f32, %out: f32):
+      %5 = arith.addf %in, %in_0 : f32
+      linalg.yield %5 : f32
+    } -> tensor<?xf32>
+    return %4 : tensor<?xf32>
   }
 }
 
 
 // -----// IR Dump After ConvertTensorToMemRefPass (convert-tensor-to-memref) ('builtin.module' operation) //----- //
+#map = affine_map<(d0) -> (d0)>
 module {
-  func.func @add_two_vectors(%arg0: memref<?xf32>, %arg1: memref<?xf32>, %arg2: memref<?xf32>, %arg3: i64) {
+  func.func @add_two_vectors(%arg0: memref<?xf32>, %arg1: memref<?xf32>, %arg2: memref<?xf32>, %arg3: i32) -> memref<?xf32> {
     %0 = builtin.unrealized_conversion_cast %arg2 : memref<?xf32> to tensor<?xf32>
     %1 = builtin.unrealized_conversion_cast %arg1 : memref<?xf32> to tensor<?xf32>
     %2 = builtin.unrealized_conversion_cast %arg0 : memref<?xf32> to tensor<?xf32>
-    %c0 = arith.constant 0 : index
+    %3 = arith.index_cast %arg3 : i32 to index
+    %4 = toy.tie_dims %arg0, %3 : memref<?xf32>, index -> memref<?xf32>
+    %5 = toy.tie_dims %arg1, %3 : memref<?xf32>, index -> memref<?xf32>
+    %6 = toy.tie_dims %arg2, %3 : memref<?xf32>, index -> memref<?xf32>
+    %7 = builtin.unrealized_conversion_cast %6 : memref<?xf32> to tensor<?xf32>
+    linalg.generic {indexing_maps = [#map, #map, #map], iterator_types = ["parallel"]} ins(%4, %5 : memref<?xf32>, memref<?xf32>) outs(%6 : memref<?xf32>) {
+    ^bb0(%in: f32, %in_0: f32, %out: f32):
+      %9 = arith.addf %in, %in_0 : f32
+      linalg.yield %9 : f32
+    }
+    %8 = builtin.unrealized_conversion_cast %7 : tensor<?xf32> to memref<?xf32>
+    return %8 : memref<?xf32>
+  }
+}
+
+
+// -----// IR Dump After Canonicalizer (canonicalize) ('builtin.module' operation) //----- //
+#map = affine_map<(d0) -> (d0)>
+module {
+  func.func @add_two_vectors(%arg0: memref<?xf32>, %arg1: memref<?xf32>, %arg2: memref<?xf32>, %arg3: i32) -> memref<?xf32> {
+    %0 = arith.index_cast %arg3 : i32 to index
+    %1 = toy.tie_dims %arg0, %0 : memref<?xf32>, index -> memref<?xf32>
+    %2 = toy.tie_dims %arg1, %0 : memref<?xf32>, index -> memref<?xf32>
+    %3 = toy.tie_dims %arg2, %0 : memref<?xf32>, index -> memref<?xf32>
+    linalg.generic {indexing_maps = [#map, #map, #map], iterator_types = ["parallel"]} ins(%1, %2 : memref<?xf32>, memref<?xf32>) outs(%3 : memref<?xf32>) {
+    ^bb0(%in: f32, %in_0: f32, %out: f32):
+      %4 = arith.addf %in, %in_0 : f32
+      linalg.yield %4 : f32
+    }
+    return %3 : memref<?xf32>
+  }
+}
+
+
+// -----// IR Dump After ConvertLinalgToParallelLoopsPass (convert-linalg-to-parallel-loops) ('builtin.module' operation) //----- //
+module {
+  func.func @add_two_vectors(%arg0: memref<?xf32>, %arg1: memref<?xf32>, %arg2: memref<?xf32>, %arg3: i32) -> memref<?xf32> {
     %c1 = arith.constant 1 : index
-    %3 = arith.index_cast %arg3 : i64 to index
-    scf.parallel (%arg4) = (%c0) to (%3) step (%c1) {
-      %4 = memref.load %arg0[%arg4] : memref<?xf32>
-      %5 = memref.load %arg1[%arg4] : memref<?xf32>
+    %c0 = arith.constant 0 : index
+    %0 = arith.index_cast %arg3 : i32 to index
+    %1 = toy.tie_dims %arg0, %0 : memref<?xf32>, index -> memref<?xf32>
+    %2 = toy.tie_dims %arg1, %0 : memref<?xf32>, index -> memref<?xf32>
+    %3 = toy.tie_dims %arg2, %0 : memref<?xf32>, index -> memref<?xf32>
+    %dim = memref.dim %1, %c0 : memref<?xf32>
+    scf.parallel (%arg4) = (%c0) to (%dim) step (%c1) {
+      %4 = memref.load %1[%arg4] : memref<?xf32>
+      %5 = memref.load %2[%arg4] : memref<?xf32>
       %6 = arith.addf %4, %5 : f32
-      memref.store %6, %arg2[%arg4] : memref<?xf32>
+      memref.store %6, %3[%arg4] : memref<?xf32>
       scf.reduce 
     }
-    return
+    return %3 : memref<?xf32>
   }
 }
 
 
 // -----// IR Dump After Canonicalizer (canonicalize) ('builtin.module' operation) //----- //
 module {
-  func.func @add_two_vectors(%arg0: memref<?xf32>, %arg1: memref<?xf32>, %arg2: memref<?xf32>, %arg3: i64) {
+  func.func @add_two_vectors(%arg0: memref<?xf32>, %arg1: memref<?xf32>, %arg2: memref<?xf32>, %arg3: i32) -> memref<?xf32> {
     %c1 = arith.constant 1 : index
     %c0 = arith.constant 0 : index
-    %0 = arith.index_cast %arg3 : i64 to index
+    %0 = arith.index_cast %arg3 : i32 to index
+    %1 = toy.tie_dims %arg0, %0 : memref<?xf32>, index -> memref<?xf32>
+    %2 = toy.tie_dims %arg1, %0 : memref<?xf32>, index -> memref<?xf32>
+    %3 = toy.tie_dims %arg2, %0 : memref<?xf32>, index -> memref<?xf32>
+    scf.parallel (%arg4) = (%c0) to (%0) step (%c1) {
+      %4 = memref.load %1[%arg4] : memref<?xf32>
+      %5 = memref.load %2[%arg4] : memref<?xf32>
+      %6 = arith.addf %4, %5 : f32
+      memref.store %6, %3[%arg4] : memref<?xf32>
+      scf.reduce 
+    }
+    return %3 : memref<?xf32>
+  }
+}
+
+
+// -----// IR Dump After FoldTieDimsOpPass (fold-ties-dims-op) ('builtin.module' operation) //----- //
+module {
+  func.func @add_two_vectors(%arg0: memref<?xf32>, %arg1: memref<?xf32>, %arg2: memref<?xf32>, %arg3: i32) -> memref<?xf32> {
+    %c1 = arith.constant 1 : index
+    %c0 = arith.constant 0 : index
+    %0 = arith.index_cast %arg3 : i32 to index
     scf.parallel (%arg4) = (%c0) to (%0) step (%c1) {
       %1 = memref.load %arg0[%arg4] : memref<?xf32>
       %2 = memref.load %arg1[%arg4] : memref<?xf32>
@@ -42,7 +254,7 @@ module {
       memref.store %3, %arg2[%arg4] : memref<?xf32>
       scf.reduce 
     }
-    return
+    return %arg2 : memref<?xf32>
   }
 }
 

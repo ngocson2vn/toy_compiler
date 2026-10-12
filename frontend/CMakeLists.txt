@@ -1,7 +1,7 @@
 # Generate operation definitions
 set(LLVM_TARGET_DEFINITIONS toy_ops.td)
-mlir_tablegen(toy_dialect.h.inc -gen-dialect-decls)
-mlir_tablegen(toy_dialect.cpp.inc -gen-dialect-defs)
+mlir_tablegen(toy_dialect.h.inc -gen-dialect-decls -dialect=toy)
+mlir_tablegen(toy_dialect.cpp.inc -gen-dialect-defs -dialect=toy)
 mlir_tablegen(toy_ops.h.inc -gen-op-decls)
 mlir_tablegen(toy_ops.cpp.inc -gen-op-defs)
 add_public_tablegen_target(ToyOpsIncGen)

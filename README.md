@@ -45,6 +45,8 @@ My LinkedIn: https://www.linkedin.com/in/ngocson2vn/
 
 # Development Notes
 ## Lowering GPU module to CUBIN
+Read more [Lower_GPUModule.md](Lower_GPUModule.md)
+
 The backend passes generate a GPU module which is represented in both **LLVM Dialect** and **NVVM Dialect** as follows:
 ```MLIR
   gpu.module @add_two_vectors_kernel [#nvvm.target<chip = "sm_86", features = "+ptx84">] attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i64>} {
@@ -123,3 +125,5 @@ GpuModuleToBinaryPass::runOnOperation()
 // llvm-project/mlir/lib/Target/LLVM/NVVM/Target.cpp
 // result = compileToBinary(*serializedISA);
 ```
+
+Read more [Lower_GPUModule.md](Lower_GPUModule.md)
