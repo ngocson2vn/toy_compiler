@@ -7,9 +7,6 @@ export TOY_DUMP_LLVMIR=true
 # Required
 export CUDA_ROOT=/usr/local/cuda-12.4
 
-OBJECT_FILE=./output.o
-SHARED_OBJECT_FILE=./libkernel.so
-
 # Remove old object file if it exists
 rm -fv ${OBJECT_FILE}
 
@@ -19,11 +16,17 @@ rm -fv ${OBJECT_FILE}
 # ./output/bin/compiler -debug ./add_two_vectors.toy sm_86
 # ./output/bin/compiler ./add_two_vectors.toy sm_86
 
-./output/bin/compiler ./add_max_vectors.toy sm_86 false false -debug
+./output/bin/compiler ./add_max_vectors.toy sm_86 false false #-debug
+
+OBJECT_FILE=./output.o
+OUTPUT_FILE=./libkernel.so
+if readelf -s ./output.o | grep FUNC | grep -E ' main$' 2>&1>/dev/null; then
+  OUTPUT_FILE=./main
+fi
 
 # Generate a shared object file from the generated object file
 if [ -f ${OBJECT_FILE} ]; then
-  g++ -shared -fPIC ${OBJECT_FILE} -o ${SHARED_OBJECT_FILE}
+  g++ -L/lib/x86_64-linux-gnu ${OBJECT_FILE} -o ${OUTPUT_FILE} build/runtime/libruntime.a build/common/libcommon.a -lcuda
   echo
-  echo Output: ${SHARED_OBJECT_FILE}
+  echo Output: ${OUTPUT_FILE}
 fi

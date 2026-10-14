@@ -9,6 +9,20 @@ module {
     %5 = toy.store %4, %3 : tensor<?xf32>, tensor<?xf32> -> tensor<?xf32>
     return %5 : tensor<?xf32>
   }
+  func.func @main() {
+    %0 = toy.constant 256 : i32 -> i32
+    %1 = arith.index_cast %0 : i32 to index
+    %2 = toy.alloc %1 : -> tensor<?xf32>
+    %3 = toy.alloc %1 : -> tensor<?xf32>
+    %4 = toy.alloc %1 : -> tensor<?xf32>
+    %5 = toy.random %2 : tensor<?xf32> -> tensor<?xf32>
+    %6 = toy.random %3 : tensor<?xf32> -> tensor<?xf32>
+    %7 = toy.call @add_two_vectors(%2, %3, %4, %0) : (tensor<?xf32>, tensor<?xf32>, tensor<?xf32>, i32) -> tensor<?xf32>
+    %8 = toy.print %2 : tensor<?xf32> -> i64
+    %9 = toy.print %3 : tensor<?xf32> -> i64
+    %10 = toy.print %4 : tensor<?xf32> -> i64
+    return
+  }
 }
 
 
@@ -36,6 +50,20 @@ module {
     %7 = bufferization.materialize_in_destination %6 in %3 : (tensor<?xf32>, tensor<?xf32>) -> tensor<?xf32>
     return %7 : tensor<?xf32>
   }
+  func.func @main() {
+    %0 = toy.constant 256 : i32 -> i32
+    %1 = arith.index_cast %0 : i32 to index
+    %2 = toy.alloc %1 : -> tensor<?xf32>
+    %3 = toy.alloc %1 : -> tensor<?xf32>
+    %4 = toy.alloc %1 : -> tensor<?xf32>
+    %5 = toy.random %2 : tensor<?xf32> -> tensor<?xf32>
+    %6 = toy.random %3 : tensor<?xf32> -> tensor<?xf32>
+    %7 = toy.call @add_two_vectors(%2, %3, %4, %0) : (tensor<?xf32>, tensor<?xf32>, tensor<?xf32>, i32) -> tensor<?xf32>
+    %8 = toy.print %2 : tensor<?xf32> -> i64
+    %9 = toy.print %3 : tensor<?xf32> -> i64
+    %10 = toy.print %4 : tensor<?xf32> -> i64
+    return
+  }
 }
 
 
@@ -54,6 +82,20 @@ module {
     } -> tensor<?xf32>
     %5 = bufferization.materialize_in_destination %4 in %3 : (tensor<?xf32>, tensor<?xf32>) -> tensor<?xf32>
     return %5 : tensor<?xf32>
+  }
+  func.func @main() {
+    %0 = toy.constant 256 : i32 -> i32
+    %1 = arith.index_cast %0 : i32 to index
+    %2 = toy.alloc %1 : -> tensor<?xf32>
+    %3 = toy.alloc %1 : -> tensor<?xf32>
+    %4 = toy.alloc %1 : -> tensor<?xf32>
+    %5 = toy.random %2 : tensor<?xf32> -> tensor<?xf32>
+    %6 = toy.random %3 : tensor<?xf32> -> tensor<?xf32>
+    %7 = toy.call @add_two_vectors(%2, %3, %4, %0) : (tensor<?xf32>, tensor<?xf32>, tensor<?xf32>, i32) -> tensor<?xf32>
+    %8 = toy.print %2 : tensor<?xf32> -> i64
+    %9 = toy.print %3 : tensor<?xf32> -> i64
+    %10 = toy.print %4 : tensor<?xf32> -> i64
+    return
   }
 }
 
@@ -77,6 +119,20 @@ module {
     %6 = bufferization.materialize_in_destination %5 in %3 : (tensor<?xf32>, tensor<?xf32>) -> tensor<?xf32>
     return %6 : tensor<?xf32>
   }
+  func.func @main() {
+    %0 = toy.constant 256 : i32 -> i32
+    %1 = arith.index_cast %0 : i32 to index
+    %2 = toy.alloc %1 : -> tensor<?xf32>
+    %3 = toy.alloc %1 : -> tensor<?xf32>
+    %4 = toy.alloc %1 : -> tensor<?xf32>
+    %5 = toy.random %2 : tensor<?xf32> -> tensor<?xf32>
+    %6 = toy.random %3 : tensor<?xf32> -> tensor<?xf32>
+    %7 = toy.call @add_two_vectors(%2, %3, %4, %0) : (tensor<?xf32>, tensor<?xf32>, tensor<?xf32>, i32) -> tensor<?xf32>
+    %8 = toy.print %2 : tensor<?xf32> -> i64
+    %9 = toy.print %3 : tensor<?xf32> -> i64
+    %10 = toy.print %4 : tensor<?xf32> -> i64
+    return
+  }
 }
 
 
@@ -96,6 +152,20 @@ module {
     } -> tensor<?xf32>
     %6 = bufferization.materialize_in_destination %5 in %3 : (tensor<?xf32>, tensor<?xf32>) -> tensor<?xf32>
     return %6 : tensor<?xf32>
+  }
+  func.func @main() {
+    %0 = toy.constant 256 : i32 -> i32
+    %1 = arith.index_cast %0 : i32 to index
+    %2 = toy.alloc %1 : -> tensor<?xf32>
+    %3 = toy.alloc %1 : -> tensor<?xf32>
+    %4 = toy.alloc %1 : -> tensor<?xf32>
+    %5 = toy.random %2 : tensor<?xf32> -> tensor<?xf32>
+    %6 = toy.random %3 : tensor<?xf32> -> tensor<?xf32>
+    %7 = toy.call @add_two_vectors(%2, %3, %4, %0) : (tensor<?xf32>, tensor<?xf32>, tensor<?xf32>, i32) -> tensor<?xf32>
+    %8 = toy.print %2 : tensor<?xf32> -> i64
+    %9 = toy.print %3 : tensor<?xf32> -> i64
+    %10 = toy.print %4 : tensor<?xf32> -> i64
+    return
   }
 }
 
@@ -117,6 +187,20 @@ module {
     %6 = bufferization.materialize_in_destination %5 in %3 : (tensor<?xf32>, tensor<?xf32>) -> tensor<?xf32>
     return %6 : tensor<?xf32>
   }
+  func.func @main() {
+    %0 = toy.constant 256 : i32 -> i32
+    %1 = arith.index_cast %0 : i32 to index
+    %2 = toy.alloc %1 : -> tensor<?xf32>
+    %3 = toy.alloc %1 : -> tensor<?xf32>
+    %4 = toy.alloc %1 : -> tensor<?xf32>
+    %5 = toy.random %2 : tensor<?xf32> -> tensor<?xf32>
+    %6 = toy.random %3 : tensor<?xf32> -> tensor<?xf32>
+    %7 = toy.call @add_two_vectors(%2, %3, %4, %0) : (tensor<?xf32>, tensor<?xf32>, tensor<?xf32>, i32) -> tensor<?xf32>
+    %8 = toy.print %2 : tensor<?xf32> -> i64
+    %9 = toy.print %3 : tensor<?xf32> -> i64
+    %10 = toy.print %4 : tensor<?xf32> -> i64
+    return
+  }
 }
 
 
@@ -136,6 +220,20 @@ module {
     } -> tensor<?xf32>
     return %5 : tensor<?xf32>
   }
+  func.func @main() {
+    %0 = toy.constant 256 : i32 -> i32
+    %1 = arith.index_cast %0 : i32 to index
+    %2 = toy.alloc %1 : -> tensor<?xf32>
+    %3 = toy.alloc %1 : -> tensor<?xf32>
+    %4 = toy.alloc %1 : -> tensor<?xf32>
+    %5 = toy.random %2 : tensor<?xf32> -> tensor<?xf32>
+    %6 = toy.random %3 : tensor<?xf32> -> tensor<?xf32>
+    %7 = toy.call @add_two_vectors(%2, %3, %4, %0) : (tensor<?xf32>, tensor<?xf32>, tensor<?xf32>, i32) -> tensor<?xf32>
+    %8 = toy.print %2 : tensor<?xf32> -> i64
+    %9 = toy.print %3 : tensor<?xf32> -> i64
+    %10 = toy.print %4 : tensor<?xf32> -> i64
+    return
+  }
 }
 
 
@@ -153,6 +251,20 @@ module {
       linalg.yield %5 : f32
     } -> tensor<?xf32>
     return %4 : tensor<?xf32>
+  }
+  func.func @main() {
+    %0 = toy.constant 256 : i32 -> i32
+    %1 = arith.index_cast %0 : i32 to index
+    %2 = toy.alloc %1 : -> tensor<?xf32>
+    %3 = toy.alloc %1 : -> tensor<?xf32>
+    %4 = toy.alloc %1 : -> tensor<?xf32>
+    %5 = toy.random %2 : tensor<?xf32> -> tensor<?xf32>
+    %6 = toy.random %3 : tensor<?xf32> -> tensor<?xf32>
+    %7 = toy.call @add_two_vectors(%2, %3, %4, %0) : (tensor<?xf32>, tensor<?xf32>, tensor<?xf32>, i32) -> tensor<?xf32>
+    %8 = toy.print %2 : tensor<?xf32> -> i64
+    %9 = toy.print %3 : tensor<?xf32> -> i64
+    %10 = toy.print %4 : tensor<?xf32> -> i64
+    return
   }
 }
 
@@ -177,6 +289,20 @@ module {
     %8 = builtin.unrealized_conversion_cast %7 : tensor<?xf32> to memref<?xf32>
     return %8 : memref<?xf32>
   }
+  func.func @main() {
+    %0 = toy.constant 256 : i32 -> i32
+    %1 = arith.index_cast %0 : i32 to index
+    %2 = toy.alloc %1 : -> memref<?xf32>
+    %3 = toy.alloc %1 : -> memref<?xf32>
+    %4 = toy.alloc %1 : -> memref<?xf32>
+    %5 = toy.random %2 : memref<?xf32> -> memref<?xf32>
+    %6 = toy.random %3 : memref<?xf32> -> memref<?xf32>
+    %7 = toy.call @add_two_vectors(%2, %3, %4, %0) : (memref<?xf32>, memref<?xf32>, memref<?xf32>, i32) -> memref<?xf32>
+    %8 = toy.print %2 : memref<?xf32> -> i64
+    %9 = toy.print %3 : memref<?xf32> -> i64
+    %10 = toy.print %4 : memref<?xf32> -> i64
+    return
+  }
 }
 
 
@@ -194,6 +320,20 @@ module {
       linalg.yield %4 : f32
     }
     return %3 : memref<?xf32>
+  }
+  func.func @main() {
+    %0 = toy.constant 256 : i32 -> i32
+    %1 = arith.index_cast %0 : i32 to index
+    %2 = toy.alloc %1 : -> memref<?xf32>
+    %3 = toy.alloc %1 : -> memref<?xf32>
+    %4 = toy.alloc %1 : -> memref<?xf32>
+    %5 = toy.random %2 : memref<?xf32> -> memref<?xf32>
+    %6 = toy.random %3 : memref<?xf32> -> memref<?xf32>
+    %7 = toy.call @add_two_vectors(%2, %3, %4, %0) : (memref<?xf32>, memref<?xf32>, memref<?xf32>, i32) -> memref<?xf32>
+    %8 = toy.print %2 : memref<?xf32> -> i64
+    %9 = toy.print %3 : memref<?xf32> -> i64
+    %10 = toy.print %4 : memref<?xf32> -> i64
+    return
   }
 }
 
@@ -217,6 +357,20 @@ module {
     }
     return %3 : memref<?xf32>
   }
+  func.func @main() {
+    %0 = toy.constant 256 : i32 -> i32
+    %1 = arith.index_cast %0 : i32 to index
+    %2 = toy.alloc %1 : -> memref<?xf32>
+    %3 = toy.alloc %1 : -> memref<?xf32>
+    %4 = toy.alloc %1 : -> memref<?xf32>
+    %5 = toy.random %2 : memref<?xf32> -> memref<?xf32>
+    %6 = toy.random %3 : memref<?xf32> -> memref<?xf32>
+    %7 = toy.call @add_two_vectors(%2, %3, %4, %0) : (memref<?xf32>, memref<?xf32>, memref<?xf32>, i32) -> memref<?xf32>
+    %8 = toy.print %2 : memref<?xf32> -> i64
+    %9 = toy.print %3 : memref<?xf32> -> i64
+    %10 = toy.print %4 : memref<?xf32> -> i64
+    return
+  }
 }
 
 
@@ -238,6 +392,20 @@ module {
     }
     return %3 : memref<?xf32>
   }
+  func.func @main() {
+    %0 = toy.constant 256 : i32 -> i32
+    %1 = arith.index_cast %0 : i32 to index
+    %2 = toy.alloc %1 : -> memref<?xf32>
+    %3 = toy.alloc %1 : -> memref<?xf32>
+    %4 = toy.alloc %1 : -> memref<?xf32>
+    %5 = toy.random %2 : memref<?xf32> -> memref<?xf32>
+    %6 = toy.random %3 : memref<?xf32> -> memref<?xf32>
+    %7 = toy.call @add_two_vectors(%2, %3, %4, %0) : (memref<?xf32>, memref<?xf32>, memref<?xf32>, i32) -> memref<?xf32>
+    %8 = toy.print %2 : memref<?xf32> -> i64
+    %9 = toy.print %3 : memref<?xf32> -> i64
+    %10 = toy.print %4 : memref<?xf32> -> i64
+    return
+  }
 }
 
 
@@ -255,6 +423,20 @@ module {
       scf.reduce 
     }
     return %arg2 : memref<?xf32>
+  }
+  func.func @main() {
+    %0 = toy.constant 256 : i32 -> i32
+    %1 = arith.index_cast %0 : i32 to index
+    %2 = toy.alloc %1 : -> memref<?xf32>
+    %3 = toy.alloc %1 : -> memref<?xf32>
+    %4 = toy.alloc %1 : -> memref<?xf32>
+    %5 = toy.random %2 : memref<?xf32> -> memref<?xf32>
+    %6 = toy.random %3 : memref<?xf32> -> memref<?xf32>
+    %7 = toy.call @add_two_vectors(%2, %3, %4, %0) : (memref<?xf32>, memref<?xf32>, memref<?xf32>, i32) -> memref<?xf32>
+    %8 = toy.print %2 : memref<?xf32> -> i64
+    %9 = toy.print %3 : memref<?xf32> -> i64
+    %10 = toy.print %4 : memref<?xf32> -> i64
+    return
   }
 }
 

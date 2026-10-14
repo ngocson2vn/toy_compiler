@@ -32,14 +32,6 @@ namespace compiler {
 using namespace common;
 namespace frontend {
 
-namespace type::name {
-  static const std::string F32 = "f32";
-  static const std::string F16 = "f16";
-  static const std::string I32 = "i32";
-  static const std::string TENSOR = "tensor";
-  static const std::string INVALID = "invalid";
-}
-
 class ShapeValue {
  public:
   ShapeValue(uint64_t val)

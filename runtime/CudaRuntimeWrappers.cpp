@@ -148,8 +148,9 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT CUmodule mgpuModuleLoadJIT(void *data,
 }
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuModuleUnload(CUmodule module) {
-  CUDA_REPORT_IF_ERROR(cuModuleUnload(module));
-  fprintf(stdout, "Successfully unloaded cuda module %p\n", module);
+  // CUDA_REPORT_IF_ERROR(cuModuleUnload(module));
+  // fprintf(stdout, "Successfully unloaded cuda module %p\n", module);
+  static_assert(true, "Temporarily do not unload cuda module");
 }
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT CUfunction

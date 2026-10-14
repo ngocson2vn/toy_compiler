@@ -422,7 +422,7 @@ private:
                       loc(call.loc()), mlir::TypeRange{val.getType()}, val);
 
     // Replace the old value
-    symbolTable.insert(varExpr.getName(), newVal);
+    // symbolTable.insert(varExpr.getName(), newVal);
 
     return newVal;
   }

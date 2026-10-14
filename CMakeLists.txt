@@ -37,6 +37,9 @@ include_directories(.)
 include_directories(${PROJECT_BINARY_DIR})
 include_directories(${CUDA_ROOT}/include)
 
+# common
+add_subdirectory(common)
+
 # frontend
 add_subdirectory(frontend)
 

@@ -2,7 +2,27 @@
 
 namespace runtime::cuda {
 
-DevicePtr copyH2D(void* hostPtr, std::size_t numBytes) {
+void copyD2H(void* hostPtr, void* devPtr, std::size_t numBytes) {
+  auto res = cuMemcpyDtoH(hostPtr, reinterpret_cast<CUdeviceptr>(devPtr), numBytes);
+  if (res != CUDA_SUCCESS) {
+    const char* errMsg;
+    cuGetErrorString(res, &errMsg);
+    fprintf(stderr, "CUDA Error: %s\n", errMsg);
+    std::abort();
+  }
+}
+
+void copyH2D(void* devPtr, const void* hostPtr, std::size_t numBytes) {
+  auto res = cuMemcpyHtoD(reinterpret_cast<CUdeviceptr>(devPtr), hostPtr, numBytes);
+  if (res != CUDA_SUCCESS) {
+    const char* errMsg;
+    cuGetErrorString(res, &errMsg);
+    fprintf(stderr, "CUDA Error: %s\n", errMsg);
+    std::abort();
+  }
+}
+
+DevicePtr copyH2D(const void* hostPtr, std::size_t numBytes) {
   CUdeviceptr devPtr = 0;
   CUDA_CHECK_RET_ZERO(cuMemAlloc(&devPtr, numBytes));
   CUDA_CHECK_RET_ZERO(cuMemcpyHtoD(devPtr, hostPtr, numBytes));
@@ -10,7 +30,7 @@ DevicePtr copyH2D(void* hostPtr, std::size_t numBytes) {
   return devPtr;
 }
 
-DevicePtr copyH2DAsync(void* hostPtr, std::size_t numBytes, CUstream hStream) {
+DevicePtr copyH2DAsync(const void* hostPtr, std::size_t numBytes, CUstream hStream) {
   CUdeviceptr devPtr = 0;
   CUDA_CHECK_RET_ZERO(cuMemAlloc(&devPtr, numBytes));
   CUDA_CHECK_RET_ZERO(cuMemcpyHtoDAsync(devPtr, hostPtr, numBytes, hStream));

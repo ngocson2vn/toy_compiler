@@ -145,5 +145,6 @@
     "__functional_base": "cpp"
   },
   "mlir.tablegen_server_path": "/home/son.nguyen/workspace/toy_compiler/llvm-project/build/bin/tblgen-lsp-server",
-  "lldb-dap.executable-path": "/usr/lib/llvm-17/bin/lldb-vscode"
+  "lldb-dap.executable-path": "/usr/lib/llvm-17/bin/lldb-vscode",
+  "C_Cpp.errorSquiggles": "disabled"
 }

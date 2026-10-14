@@ -132,7 +132,10 @@ class DevicePtr {
   CUdeviceptr ptr_ = 0;
 };
 
-DevicePtr copyH2D(void* hostPtr, std::size_t numBytes);
-DevicePtr copyH2DAsync(void* hostPtr, std::size_t numBytes, CUstream hStream);
+void copyD2H(void* hostPtr, void* devPtr, std::size_t numBytes);
+void copyH2D(void* devPtr, const void* hostPtr, std::size_t numBytes);
+
+DevicePtr copyH2D(const void* hostPtr, std::size_t numBytes);
+DevicePtr copyH2DAsync(const void* hostPtr, std::size_t numBytes, CUstream hStream);
 
 } // namespace runtime::cuda

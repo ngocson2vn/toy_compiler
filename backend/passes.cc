@@ -300,8 +300,8 @@ struct LowerToyToLLVMPrintOpPattern : public OpConversionPattern<mlir::toy::Prin
   using OpConversionPattern<mlir::toy::PrintOp>::OpConversionPattern;
   const llvm::StringRef kPrintFuncName = "toy_print";
   LogicalResult matchAndRewrite(mlir::toy::PrintOp printOp, OpAdaptor adaptor, ConversionPatternRewriter &rewriter) const override {
-    auto target = printOp.getArg();
-    auto allocOp = target.getDefiningOp<mlir::toy::AllocOp>();
+    auto arg = printOp.getArg();
+    auto allocOp = arg.getDefiningOp<mlir::toy::AllocOp>();
     if (!allocOp) {
       return failure();
     }

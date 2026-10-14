@@ -9,40 +9,60 @@ source_filename = "LLVMDialectModule"
 @llvm.global_dtors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 123, ptr @add_two_vectors_kernel_unload, ptr null }]
 @add_two_vectors_kernel_add_two_vectors_kernel_name = private unnamed_addr constant [23 x i8] c"add_two_vectors_kernel\00", align 1
 
-define ptr @add_two_vectors(ptr %0, ptr %1, ptr %2, ptr %3, i32 %4) {
-  %6 = getelementptr ptr, ptr %0, i32 0
-  %7 = load ptr, ptr %6, align 8
-  %8 = sext i32 %4 to i64
-  %9 = icmp sle i64 %8, 0
-  %10 = sub i64 0, %8
-  %11 = sub i64 %8, 1
-  %12 = select i1 %9, i64 %10, i64 %11
-  %13 = sdiv i64 %12, 128
-  %14 = sub i64 0, %13
-  %15 = add i64 %13, 1
-  %16 = select i1 %9, i64 %14, i64 %15
-  %17 = alloca %0, align 8
-  %18 = alloca ptr, i64 4, align 8
-  %19 = getelementptr inbounds nuw %0, ptr %17, i32 0, i32 0
-  store i64 %8, ptr %19, align 4
-  %20 = getelementptr ptr, ptr %18, i32 0
-  store ptr %19, ptr %20, align 8
-  %21 = getelementptr inbounds nuw %0, ptr %17, i32 0, i32 1
-  store ptr %1, ptr %21, align 8
-  %22 = getelementptr ptr, ptr %18, i32 1
-  store ptr %21, ptr %22, align 8
-  %23 = getelementptr inbounds nuw %0, ptr %17, i32 0, i32 2
-  store ptr %2, ptr %23, align 8
-  %24 = getelementptr ptr, ptr %18, i32 2
-  store ptr %23, ptr %24, align 8
-  %25 = getelementptr inbounds nuw %0, ptr %17, i32 0, i32 3
-  store ptr %3, ptr %25, align 8
-  %26 = getelementptr ptr, ptr %18, i32 3
-  store ptr %25, ptr %26, align 8
-  %27 = load ptr, ptr @add_two_vectors_kernel_module, align 8
-  %28 = call ptr @mgpuModuleGetFunction(ptr %27, ptr @add_two_vectors_kernel_add_two_vectors_kernel_name)
-  call void @mgpuLaunchKernel(ptr %28, i64 %16, i64 1, i64 1, i64 128, i64 1, i64 1, i32 0, ptr %7, ptr %18, ptr null, i64 4)
-  ret ptr %3
+declare i64 @toy_print(ptr, i32, i32)
+
+declare ptr @toy_random(ptr, i32, i32)
+
+declare ptr @toy_alloc(i32, i32)
+
+define ptr @add_two_vectors(ptr %0, ptr %1, ptr %2, i32 %3) {
+  %5 = sext i32 %3 to i64
+  %6 = icmp sle i64 %5, 0
+  %7 = sub i64 0, %5
+  %8 = sub i64 %5, 1
+  %9 = select i1 %6, i64 %7, i64 %8
+  %10 = sdiv i64 %9, 128
+  %11 = sub i64 0, %10
+  %12 = add i64 %10, 1
+  %13 = select i1 %6, i64 %11, i64 %12
+  %14 = alloca %0, align 8
+  %15 = alloca ptr, i64 4, align 8
+  %16 = getelementptr inbounds nuw %0, ptr %14, i32 0, i32 0
+  store i64 %5, ptr %16, align 4
+  %17 = getelementptr ptr, ptr %15, i32 0
+  store ptr %16, ptr %17, align 8
+  %18 = getelementptr inbounds nuw %0, ptr %14, i32 0, i32 1
+  store ptr %0, ptr %18, align 8
+  %19 = getelementptr ptr, ptr %15, i32 1
+  store ptr %18, ptr %19, align 8
+  %20 = getelementptr inbounds nuw %0, ptr %14, i32 0, i32 2
+  store ptr %1, ptr %20, align 8
+  %21 = getelementptr ptr, ptr %15, i32 2
+  store ptr %20, ptr %21, align 8
+  %22 = getelementptr inbounds nuw %0, ptr %14, i32 0, i32 3
+  store ptr %2, ptr %22, align 8
+  %23 = getelementptr ptr, ptr %15, i32 3
+  store ptr %22, ptr %23, align 8
+  %24 = load ptr, ptr @add_two_vectors_kernel_module, align 8
+  %25 = call ptr @mgpuModuleGetFunction(ptr %24, ptr @add_two_vectors_kernel_add_two_vectors_kernel_name)
+  %26 = call ptr @mgpuStreamCreate()
+  call void @mgpuLaunchKernel(ptr %25, i64 %13, i64 1, i64 1, i64 128, i64 1, i64 1, i32 0, ptr %26, ptr %15, ptr null, i64 4)
+  call void @mgpuStreamSynchronize(ptr %26)
+  call void @mgpuStreamDestroy(ptr %26)
+  ret ptr %2
+}
+
+define void @main() {
+  %1 = call ptr @toy_alloc(i32 256, i32 3)
+  %2 = call ptr @toy_alloc(i32 256, i32 3)
+  %3 = call ptr @toy_alloc(i32 256, i32 3)
+  %4 = call ptr @toy_random(ptr %1, i32 256, i32 3)
+  %5 = call ptr @toy_random(ptr %2, i32 256, i32 3)
+  %6 = call ptr @add_two_vectors(ptr %1, ptr %2, ptr %3, i32 256)
+  %7 = call i64 @toy_print(ptr %1, i32 256, i32 3)
+  %8 = call i64 @toy_print(ptr %2, i32 256, i32 3)
+  %9 = call i64 @toy_print(ptr %3, i32 256, i32 3)
+  ret void
 }
 
 define internal void @add_two_vectors_kernel_load() section ".text.startup" {
@@ -65,7 +85,13 @@ declare void @mgpuModuleUnload(ptr)
 
 declare ptr @mgpuModuleGetFunction(ptr, ptr)
 
+declare ptr @mgpuStreamCreate()
+
 declare void @mgpuLaunchKernel(ptr, i64, i64, i64, i64, i64, i64, i32, ptr, ptr, ptr, i64)
+
+declare void @mgpuStreamSynchronize(ptr)
+
+declare void @mgpuStreamDestroy(ptr)
 
 !llvm.module.flags = !{!0}
 
