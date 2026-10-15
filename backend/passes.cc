@@ -330,15 +330,36 @@ struct LowerToyToLLVMPrintOpPattern : public OpConversionPattern<mlir::toy::Prin
                               );
     args.push_back(encodedElemTypeVal);
 
+    // argName
+    int argNameLen = 1;
+    auto argName = dyn_cast_or_null<StringAttr>(printOp->getAttr("argName"));
+    std::string argNameStr = "";
+    if (!!argName) {
+      argNameLen = argName.size() + 1; // +1 for '\0' character
+      argNameStr = argName.str();
+    }
+    argNameStr.push_back('\0');
+
+    auto i8Type = IntegerType::get(context, 8);
+    auto i32Type = IntegerType::get(context, 32);
+    auto i64Type = IntegerType::get(context, 64);
+    auto ptrType = LLVM::LLVMPointerType::get(context);
+    auto argNameType = LLVM::LLVMArrayType::get(i8Type, argNameLen);
+    auto argNameVal = rewriter.create<LLVM::ConstantOp>(loc, argNameType, rewriter.getStringAttr(argNameStr));
+    auto c1 = rewriter.create<LLVM::ConstantOp>(loc, i32Type, 1);
+    auto argNamePtr  = rewriter.create<LLVM::AllocaOp>(loc, ptrType, argNameType, c1);
+    rewriter.create<LLVM::StoreOp>(loc, argNameVal, argNamePtr);
+
+    // auto c0 = rewriter.create<LLVM::ConstantOp>(loc, i32Type, 0);
+    // auto argNamePtr = rewriter.create<LLVM::GEPOp>(loc, ptrType, i8Type, argNameVal, ValueRange{c0});
+    args.push_back(argNamePtr);
+
     auto moduleOp = printOp->getParentOfType<mlir::ModuleOp>();
     LLVM::LLVMFuncOp printFuncOp = dyn_cast_or_null<LLVM::LLVMFuncOp>(moduleOp.lookupSymbol(kPrintFuncName));
     if (!printFuncOp) {
       rewriter.setInsertionPointToStart(moduleOp.getBody());
 
-      auto i32Type = IntegerType::get(context, 32);
-      auto i64Type = IntegerType::get(context, 64);
-      auto ptrType = LLVM::LLVMPointerType::get(context);
-      auto printFuncType = LLVM::LLVMFunctionType::get(i64Type, llvm::ArrayRef<mlir::Type>{ptrType, i32Type, i32Type});
+      auto printFuncType = LLVM::LLVMFunctionType::get(i64Type, llvm::ArrayRef<mlir::Type>{ptrType, i32Type, i32Type, ptrType});
       printFuncOp = rewriter.create<LLVM::LLVMFuncOp>(loc, kPrintFuncName, printFuncType, LLVM::Linkage::External);
     }
 

@@ -47,9 +47,9 @@ void random(void* devicePtr, int numElems) {
 }
 
 template <typename ElemType>
-int64_t print(void* devicePtr, int numElems) {
+int64_t print(void* devicePtr, int numElems, char* argName) {
   if (numElems < 1) {
-    printf("tensor data: []\n");
+    printf("%s tensor: []\n", argName);
     return 0;
   }
 
@@ -57,7 +57,7 @@ int64_t print(void* devicePtr, int numElems) {
   auto numBytes = sizeof(ElemType) * numElems;
   cuda::copyD2H(hostVec.data(), devicePtr, numBytes);
 
-  printf("tensor data: [");
+  printf("%s tensor: [", argName);
   if constexpr(std::is_same<ElemType, int32_t>()) {
     printf("%d", hostVec[0]);
     for (int i = 1; i < numElems; i++) {
@@ -120,17 +120,17 @@ extern "C" {
     return devicePtr;
   }
 
-  int64_t toy_print(void* devicePtr, int numElems, int elemType) {
+  int64_t toy_print(void* devicePtr, int numElems, int elemType, void* argName) {
     auto type = static_cast<Type>(elemType);
     switch (type) {
       case Type::I32: {
-        return print<int32_t>(devicePtr, numElems);
+        return print<int32_t>(devicePtr, numElems, static_cast<char*>(argName));
       }
       case Type::F32: {
-        return print<float32>(devicePtr, numElems);
+        return print<float32>(devicePtr, numElems, static_cast<char*>(argName));
       }
       case Type::F16: {
-        return print<float16>(devicePtr, numElems);
+        return print<float16>(devicePtr, numElems, static_cast<char*>(argName));
       }
       default:
         assert(false && "The type is unsupported");

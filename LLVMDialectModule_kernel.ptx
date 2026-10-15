@@ -14,7 +14,7 @@
 	.param .u64 .ptr .align 1 add_two_vectors_kernel_param_2,
 	.param .u64 .ptr .align 1 add_two_vectors_kernel_param_3
 )
-.maxntid 128, 1, 1
+.maxntid 512, 1, 1
 {
 	.reg .pred 	%p<2>;
 	.reg .b32 	%r<6>;
@@ -30,7 +30,7 @@
 	mov.u32 	%r1, %ctaid.x;
 	mov.u32 	%r2, %tid.x;
 	cvt.u64.u32 	%rd11, %r2;
-	mul.wide.u32 	%rd12, %r1, 128;
+	mul.wide.u32 	%rd12, %r1, 512;
 	sub.s64 	%rd13, %rd4, %rd12;
 	setp.le.s64 	%p1, %rd13, %rd11;
 	@%p1 bra 	$L__BB0_2;

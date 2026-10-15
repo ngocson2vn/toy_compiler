@@ -248,11 +248,20 @@ private:
   /// print(x).
   mlir::Value mlirGen(PrintExprAST &call) {
     auto arg = call.getArg();
+    StringRef argName = "";
+    if (auto varExpr = dyn_cast<VariableExprAST>(arg)) {
+      argName = varExpr->getName();
+    }
+
     auto argVal = mlirGen(*arg);
     if (!argVal)
       return nullptr;
 
     auto v = builder.create<mlir::toy::PrintOp>(loc(call.loc()), builder.getI64Type(), argVal);
+    if (!argName.empty()) {
+      v->setAttr("argName", builder.getStringAttr(argName));
+    }
+
     return v;
   }
 

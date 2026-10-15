@@ -126,7 +126,7 @@ llvm::LogicalResult lower(ModuleOp& module, const std::string& targetArch) {
   //============================================================================
   // Lower Loops to GPU
   //============================================================================
-  mlir::SmallVector<int64_t> tileSizes{128};
+  mlir::SmallVector<int64_t> tileSizes{512};
   pm.addNestedPass<func::FuncOp>(::mlir::toy::createTileLoopsPass(tileSizes));
   pm.addNestedPass<func::FuncOp>(mlir::createGpuMapParallelLoopsPass());
   pm.addPass(mlir::createConvertParallelLoopToGpuPass());

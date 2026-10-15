@@ -7,9 +7,9 @@ target triple = "nvptx64-nvidia-cuda"
 define ptx_kernel void @add_two_vectors_kernel(i64 %0, ptr readonly captures(none) %1, ptr readonly captures(none) %2, ptr writeonly captures(none) %3) local_unnamed_addr #0 {
   %5 = tail call i32 @llvm.nvvm.read.ptx.sreg.ctaid.x()
   %6 = zext nneg i32 %5 to i64
-  %7 = tail call range(i32 0, 128) i32 @llvm.nvvm.read.ptx.sreg.tid.x()
+  %7 = tail call range(i32 0, 512) i32 @llvm.nvvm.read.ptx.sreg.tid.x()
   %8 = zext nneg i32 %7 to i64
-  %9 = shl nuw nsw i64 %6, 7
+  %9 = shl nuw nsw i64 %6, 9
   %10 = sub i64 %0, %9
   %11 = icmp sgt i64 %10, %8
   br i1 %11, label %12, label %20
@@ -35,7 +35,7 @@ declare noundef range(i32 0, 2147483647) i32 @llvm.nvvm.read.ptx.sreg.ctaid.x() 
 ; Function Attrs: mustprogress nocallback nofree nosync nounwind speculatable willreturn memory(none)
 declare noundef range(i32 0, 1024) i32 @llvm.nvvm.read.ptx.sreg.tid.x() #1
 
-attributes #0 = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) "nvvm.maxntid"="128,1,1" }
+attributes #0 = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) "nvvm.maxntid"="512,1,1" }
 attributes #1 = { mustprogress nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 
 !llvm.module.flags = !{!0}

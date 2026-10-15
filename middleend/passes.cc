@@ -645,6 +645,8 @@ struct ToyPrintOpMemRefConverter : public OpConversionPattern<toy::PrintOp> {
       adaptor.getArg()
     );
 
+    newOp->setAttrs(op->getAttrs());
+
     rewriter.replaceOp(op, newOp);
     return success();
   }
