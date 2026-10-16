@@ -16,7 +16,7 @@ namespace backend {
  * \param module      - ModuleOp to be lowered
  * \param targetArch  - Target SM architecture, for example, sm_86, sm_90a
  */
-llvm::LogicalResult lower(mlir::ModuleOp& module, const std::string& targetArch);
+llvm::LogicalResult lower(mlir::ModuleOp& module, const std::string& targetArch, const std::string& libRuntimePath);
 
 } // namespace backend
 } // namespace compiler

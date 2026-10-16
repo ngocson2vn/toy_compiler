@@ -2,7 +2,6 @@
 #include <iostream>
 #include <filesystem>
 
-#include <cuda_runtime.h>
 #include "utils.h"
 #include "cuda_utils.h"
 
@@ -28,6 +27,29 @@ status::Result<std::string> getCudaRoot() {
   }
 
   return cudaRoot.string();
+}
+
+std::string getComputeCapability() {
+  CUdevice device;
+  CUDA_CHECK_ABORT(cuDeviceGet(&device, 0));
+
+  int major = 0;
+  int minor = 0;
+  CUDA_CHECK_ABORT(
+    cuDeviceGetAttribute(
+      &major, 
+      CUdevice_attribute_enum::CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR,
+      device
+    ));
+  CUDA_CHECK_ABORT(
+    cuDeviceGetAttribute(
+      &minor, 
+      CUdevice_attribute_enum::CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR,
+      device
+    ));
+
+  int cc = major * 10 + minor;
+  return std::string("sm_").append(std::to_string(cc));
 }
 
 std::string getSupportedPtxVersion() {
@@ -69,6 +91,8 @@ std::string getLibdevice() {
 
 // Ensure that CUDA_ROOT, ptxas, and libdevice exist
 static bool __cuda_check = []() -> bool {
+  CUDA_CHECK_ABORT(cuInit(0));
+
   auto cudaRootRes = getCudaRoot();
   if (!cudaRootRes.ok()) {
     std::cerr << cudaRootRes.error_message() << "\n";

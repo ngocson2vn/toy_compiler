@@ -4,7 +4,7 @@ target datalayout = "e-p6:32:32-i64:64-i128:128-i256:256-v16:16-v32:32-n16:32:64
 target triple = "nvptx64-nvidia-cuda"
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
-define ptx_kernel void @add_max_vectors_kernel(i64 %0, i64 %1, ptr readonly captures(none) %2, ptr readonly captures(none) %3, ptr writeonly captures(none) %4) local_unnamed_addr #0 {
+define ptx_kernel void @add_two_vectors_kernel(i64 %0, i64 %1, ptr readonly captures(none) %2, ptr readonly captures(none) %3, ptr writeonly captures(none) %4) local_unnamed_addr #0 {
   %6 = tail call i32 @llvm.nvvm.read.ptx.sreg.ctaid.x()
   %7 = zext nneg i32 %6 to i64
   %8 = tail call range(i32 0, 128) i32 @llvm.nvvm.read.ptx.sreg.tid.x()
@@ -12,21 +12,20 @@ define ptx_kernel void @add_max_vectors_kernel(i64 %0, i64 %1, ptr readonly capt
   %10 = shl nuw nsw i64 %7, 7
   %11 = sub i64 %0, %10
   %12 = icmp sgt i64 %11, %9
-  br i1 %12, label %13, label %22
+  br i1 %12, label %13, label %21
 
 13:                                               ; preds = %5
   %14 = or disjoint i64 %10, %9
-  %15 = getelementptr float, ptr %2, i64 %14
-  %16 = load float, ptr %15, align 4
-  %17 = getelementptr float, ptr %3, i64 %14
-  %18 = load float, ptr %17, align 4
-  %19 = fadd float %16, %18
-  %20 = tail call float @llvm.maximum.f32(float %19, float 0x3FC3333340000000)
-  %21 = getelementptr float, ptr %4, i64 %14
-  store float %20, ptr %21, align 4
-  br label %22
+  %15 = getelementptr i32, ptr %2, i64 %14
+  %16 = load i32, ptr %15, align 4
+  %17 = getelementptr i32, ptr %3, i64 %14
+  %18 = load i32, ptr %17, align 4
+  %19 = add i32 %18, %16
+  %20 = getelementptr i32, ptr %4, i64 %14
+  store i32 %19, ptr %20, align 4
+  br label %21
 
-22:                                               ; preds = %13, %5
+21:                                               ; preds = %13, %5
   ret void
 }
 
@@ -35,9 +34,6 @@ declare noundef range(i32 0, 2147483647) i32 @llvm.nvvm.read.ptx.sreg.ctaid.x() 
 
 ; Function Attrs: mustprogress nocallback nofree nosync nounwind speculatable willreturn memory(none)
 declare noundef range(i32 0, 1024) i32 @llvm.nvvm.read.ptx.sreg.tid.x() #1
-
-; Function Attrs: mustprogress nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare float @llvm.maximum.f32(float, float) #1
 
 attributes #0 = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) "nvvm.maxntid"="128,1,1" }
 attributes #1 = { mustprogress nocallback nofree nosync nounwind speculatable willreturn memory(none) }

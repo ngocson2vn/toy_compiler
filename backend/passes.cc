@@ -24,6 +24,10 @@
 #include "llvm/TargetParser/Host.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/CodeGen/CommandFlags.h"
+
+#include "lld/Common/Driver.h"
+LLD_HAS_DRIVER(elf);
+
 #define DEBUG_TYPE "backend-passes"
 
 #include "passes.h"
@@ -42,6 +46,7 @@ namespace mlir::toy {
 #define GEN_PASS_DEF_DUMPGPUMODULEPASS
 #define GEN_PASS_DEF_INJECTRUNTIMECTXPASS
 #define GEN_PASS_DEF_LOWERLLVMTOOBJECTPASS
+#define GEN_PASS_DEF_LOWEROBJECTTOBINARYPASS
 #include "backend/passes.h.inc"
 
 } // namespace mlir::toy
@@ -53,6 +58,7 @@ namespace backend {
 namespace {
 
 static constexpr char kMainFuncName[] = "main";
+static bool hasMain = false;
 
 struct LowerMemRefToLLVMFuncOpPattern : public mlir::OpConversionPattern<func::FuncOp> {  
   using OpConversionPattern<func::FuncOp>::OpConversionPattern;
@@ -496,6 +502,9 @@ class LowerMemRefToLLVMPass : public mlir::toy::impl::LowerMemRefToLLVMPassBase<
 
   void runOnOperation() override {
     auto module = getOperation();
+    if (!!module.lookupSymbol(kMainFuncName)) {
+      hasMain = true;
+    }
 
     // Define type converter
     LowerMemRefToLLVMTypeConverter typeConverter;
@@ -853,6 +862,59 @@ class LowerLLVMToObjectPass : public mlir::toy::impl::LowerLLVMToObjectPassBase<
     HostModuleToObject trantor(moduleOp, triple, chip);
     if (failed(trantor.emitObjectFile(objectFilePath))) {
       signalPassFailure();
+    }
+  }
+};
+
+class LowerObjectToBinaryPass : public mlir::toy::impl::LowerObjectToBinaryPassBase<LowerObjectToBinaryPass> {
+ public:
+  LowerObjectToBinaryPass() = default;
+
+  LowerObjectToBinaryPass(const mlir::toy::LowerObjectToBinaryPassOptions& options)
+    : LowerObjectToBinaryPassBase(options) {}
+
+  void runOnOperation() override {
+    auto moduleOp = getOperation();
+    auto rpath = std::filesystem::path(
+                      libRuntimePath.getValue()).parent_path().string();
+    std::string outputFile = hasMain ? "./main" : "./libkernel.so";
+    std::string libUnwindPath = rpath + "/libunwind.a";
+    std::string libClangRtPath = rpath + "/libclang_rt.builtins.a";
+    std::vector<const char *> args;
+    if (hasMain) {
+      args = {
+        "ld.lld",
+        "-pie",
+        "--dynamic-linker=/lib64/ld-linux-x86-64.so.2",
+        "--no-dependent-libraries",
+        "-rpath", rpath.c_str(),
+        "-o", outputFile.c_str(),
+        "/usr/lib/x86_64-linux-gnu/Scrt1.o",      // dynamic-PIE startup (not rcrt1.o)
+        "/usr/lib/x86_64-linux-gnu/crti.o",       // first
+        objectFilePath.getValue().c_str(),
+        libRuntimePath.getValue().c_str(),
+        libUnwindPath.c_str(),
+        libClangRtPath.c_str(),
+        "-L/lib/x86_64-linux-gnu",
+        "-lc",
+        "-lm",
+        "-lcuda",
+        "/lib/x86_64-linux-gnu/libstdc++.so.6",
+        "/usr/lib/x86_64-linux-gnu/crtn.o"
+      };
+    } else {
+      args = {
+        "ld.lld",
+        "-shared",
+        "-o", outputFile.c_str(),
+        objectFilePath.getValue().c_str()
+      };
+    }
+
+    auto res = lld::lldMain(args, llvm::outs(), llvm::errs(), 
+                              {{lld::Gnu, &lld::elf::link}});
+    if (res.retCode == 0) {
+      llvm::outs() << "Output: " << outputFile << "\n";
     }
   }
 };

@@ -1,13 +1,13 @@
-def add_two_vectors(a: tensor<d0xd1xf32>, b: tensor<d0xd1xf32>, out: tensor<d0xd1xf32>, d0: int, d1: int) {
+def add_two_vectors(a: tensor<d0xd1xi32>, b: tensor<d0xd1xi32>, out: tensor<d0xd1xi32>, d0: int, d1: int) {
   out = add(a, b);
 }
 
 def main() {
-  var d0 : int = 8;
-  var d1 : int = 33;
-  var a : tensor<d0xd1xf32>;
-  var b : tensor<d0xd1xf32>;
-  var out : tensor<d0xd1xf32>;
+  var d0 : int = 4;
+  var d1 : int = 8;
+  var a : tensor<d0xd1xi32>;
+  var b : tensor<d0xd1xi32>;
+  var out : tensor<d0xd1xi32>;
 
   random(a);
   random(b);

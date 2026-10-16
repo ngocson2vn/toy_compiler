@@ -51,3 +51,11 @@ def LowerLLVMToObjectPass : Pass<"lower-llvm-to-object", "ModuleOp"> {
     Option<"objectFilePath", "object-file-path", "std::string", "\"output.o\"", "The output object file path">
   ];
 }
+
+def LowerObjectToBinaryPass : Pass<"lower-object-to-binary"> {
+  let summary = "Pass to lower object file to binary";
+  let options = [
+    Option<"objectFilePath", "object-file-path", "std::string", "\"output.o\"", "The output object file path">,
+    Option<"libRuntimePath", "lib-runtime-path", "std::string", "\"./lib/libruntime.a\"", "The libruntime.a file path">
+  ];
+}

@@ -7,17 +7,22 @@ set(CMAKE_CXX_STANDARD 17)
 #============================================================================
 find_package(MLIR REQUIRED CONFIG)
 find_package(LLVM REQUIRED CONFIG)
+find_package(LLD REQUIRED CONFIG)
 
 # LLVM and MLIR headers
 message(STATUS "MLIR_INCLUDE_DIRS: ${MLIR_INCLUDE_DIRS}")
 message(STATUS "LLVM_INCLUDE_DIRS: ${LLVM_INCLUDE_DIRS}")
+message(STATUS "LLD_INCLUDE_DIRS: ${LLD_INCLUDE_DIRS}")
 include_directories(${MLIR_INCLUDE_DIRS})
 include_directories(${LLVM_INCLUDE_DIRS})
+include_directories(${LLD_INCLUDE_DIRS})
 
 message(STATUS "MLIR_CMAKE_DIR: ${MLIR_CMAKE_DIR}")
 message(STATUS "LLVM_CMAKE_DIR: ${LLVM_CMAKE_DIR}")
+message(STATUS "LLD_CMAKE_DIR: ${LLD_CMAKE_DIR}")
 list(APPEND CMAKE_MODULE_PATH "${MLIR_CMAKE_DIR}")
 list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
+list(APPEND CMAKE_MODULE_PATH "${LLD_CMAKE_DIR}")
 message(STATUS "CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
 
 # !!! THIS IS IMPORTANT !!!
@@ -115,7 +120,10 @@ target_link_libraries(compiler PRIVATE
   LLVMX86TargetMCA
   LLVMX86AsmParser
   LLVMNVPTXInfo
+  lldCommon
+  lldELF
   ${CUDA_RUNTIME_LIBRARY}
+  ${CUDA_DRIVER_LIBRARY}
 )
 
 # ${CLANG_LIB_DIR}/libclang_rt.ubsan_standalone.a

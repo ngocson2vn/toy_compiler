@@ -36,5 +36,7 @@ add_dependencies(backend
   MLIRTableGen
   LLVMSupport
   intrinsics_gen
+  lldCommon
+  lldELF
 )
 target_compile_options(backend PRIVATE -fno-rtti -g -O0)

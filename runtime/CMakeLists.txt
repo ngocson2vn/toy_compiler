@@ -3,4 +3,6 @@ add_library(runtime
   cuda_utils.cc
   builtin_ops.cc
   runtime.cc
+
+  $<TARGET_OBJECTS:common>
 )
