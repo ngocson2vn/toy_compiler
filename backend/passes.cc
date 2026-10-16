@@ -139,13 +139,44 @@ struct LowerMemRefToLLVMLoadOpPattern : public OpConversionPattern<memref::LoadO
   using OpConversionPattern<memref::LoadOp>::OpConversionPattern;
 
   LogicalResult matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor, ConversionPatternRewriter &rewriter) const override {
+    auto loc = loadOp.getLoc();
+    auto memref = loadOp.getMemRef();
+    auto tieOp = memref.getDefiningOp<mlir::toy::TieDimsOp>();
+    if (!tieOp) {
+      llvm::errs() << "ERROR Invalid argument at " << loc << "\n";
+      return failure();
+    }
+
+    auto rdims = llvm::reverse(tieOp.getDims());
+    //  dims = [d0, d1, d2] -> strides = [d1 * d2, d2, 1]
+    // rdims = [d2, d1, d0] -> strides = [d1 * d2, d2, 1]
+
+    SmallVector<Value> strides;
+    auto c1 = rewriter.create<LLVM::ConstantOp>(loc, rewriter.getI64Type(), 1);
+
+    Value s = c1;
+    strides.insert(strides.begin(), s);
+    for (auto it = rdims.begin(); it != (rdims.end() - 1); it++) {
+      Value rhs = rewriter.create<arith::IndexCastOp>(loc, rewriter.getI64Type(), *it);
+      s = rewriter.create<LLVM::MulOp>(loc, s, rhs);
+      strides.insert(strides.begin(), s);
+    }
+
     auto elemType = loadOp.getMemRefType().getElementType();
     auto resType = LLVM::LLVMPointerType::get(getContext());
-    auto operands = adaptor.getOperands();
+
+    Value linearIdx = rewriter.create<LLVM::ConstantOp>(loc, rewriter.getI64Type(), 0);
+    for (const auto& [i, s] : llvm::zip(adaptor.getIndices(), strides)) {
+      Value tmpVal = rewriter.create<LLVM::MulOp>(loc, i, s);
+      linearIdx = rewriter.create<LLVM::AddOp>(loc, tmpVal, linearIdx);
+    }
+
+    // Already converted to LLVM::LLVMPointerType
+    auto basePtr = adaptor.getMemref();
 
     // Type resultType, Type elementType, Value basePtr, ValueRange indices
-    auto loadPtr = rewriter.create<LLVM::GEPOp>(loadOp.getLoc(), resType, elemType, operands[0], operands[1]);
-    auto newOp = rewriter.create<LLVM::LoadOp>(loadOp.getLoc(), elemType, loadPtr);
+    auto loadPtr = rewriter.create<LLVM::GEPOp>(loc, resType, elemType, basePtr, ValueRange{linearIdx});
+    auto newOp = rewriter.create<LLVM::LoadOp>(loc, elemType, loadPtr);
     rewriter.replaceOp(loadOp, newOp);
 
     return success();
@@ -156,13 +187,44 @@ struct LowerMemRefToLLVMStoreOpPattern : public OpConversionPattern<memref::Stor
   using OpConversionPattern<memref::StoreOp>::OpConversionPattern;
 
   LogicalResult matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor, ConversionPatternRewriter &rewriter) const override {
+    auto loc = storeOp.getLoc();
+    auto memref = storeOp.getMemRef();
+    auto tieOp = memref.getDefiningOp<mlir::toy::TieDimsOp>();
+    if (!tieOp) {
+      llvm::errs() << "ERROR Invalid argument at " << loc << "\n";
+      return failure();
+    }
+
+    auto rdims = llvm::reverse(tieOp.getDims());
+    //  dims = [d0, d1, d2] -> strides = [d1 * d2, d2, 1]
+    // rdims = [d2, d1, d0] -> strides = [d1 * d2, d2, 1]
+
+    SmallVector<Value> strides;
+    auto c1 = rewriter.create<LLVM::ConstantOp>(loc, rewriter.getI64Type(), 1);
+
+    Value s = c1;
+    strides.insert(strides.begin(), s);
+    for (auto it = rdims.begin(); it != (rdims.end() - 1); it++) {
+      Value rhs = rewriter.create<arith::IndexCastOp>(loc, rewriter.getI64Type(), *it);
+      s = rewriter.create<LLVM::MulOp>(loc, s, rhs);
+      strides.insert(strides.begin(), s);
+    }
+
     auto elemType = storeOp.getMemRefType().getElementType();
     auto resType = LLVM::LLVMPointerType::get(getContext());
-    auto operands = adaptor.getOperands();
+
+    Value linearIdx = rewriter.create<LLVM::ConstantOp>(loc, rewriter.getI64Type(), 0);
+    for (const auto& [i, s] : llvm::zip(adaptor.getIndices(), strides)) {
+      Value tmpVal = rewriter.create<LLVM::MulOp>(loc, i, s);
+      linearIdx = rewriter.create<LLVM::AddOp>(loc, tmpVal, linearIdx);
+    }
+
+    // Already converted to LLVM::LLVMPointerType
+    auto basePtr = adaptor.getMemref();
 
     // Type resultType, Type elementType, Value basePtr, ValueRange indices
-    auto storePtr = rewriter.create<LLVM::GEPOp>(storeOp.getLoc(), resType, elemType, operands[1], operands[2]);
-    auto newOp = rewriter.create<LLVM::StoreOp>(storeOp.getLoc(), operands[0], storePtr);
+    auto storePtr = rewriter.create<LLVM::GEPOp>(loc, resType, elemType, basePtr, ValueRange{linearIdx});
+    auto newOp = rewriter.create<LLVM::StoreOp>(loc, adaptor.getValue(), storePtr);
     rewriter.replaceOp(storeOp, newOp);
 
     return success();
@@ -410,6 +472,23 @@ struct LowerMemRefToLLVMTypeConverter : public TypeConverter {
   }
 };
 
+struct LowerToyToLLVMTieDimsOpConverter : public OpConversionPattern<mlir::toy::TieDimsOp> {
+  using OpConversionPattern<mlir::toy::TieDimsOp>::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(
+      mlir::toy::TieDimsOp op, OpAdaptor adaptor,
+      ConversionPatternRewriter &rewriter) const override {
+    auto arg = adaptor.getArg();
+    if (isa<BlockArgument>(arg)) {
+      rewriter.replaceOp(op, arg);
+    } else if (op.getResult().getNumUses() == 0) {
+      rewriter.eraseOp(op);
+    }
+
+    return success();
+  }
+};
+
 class LowerMemRefToLLVMPass : public mlir::toy::impl::LowerMemRefToLLVMPassBase<LowerMemRefToLLVMPass> {
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<LLVM::LLVMDialect>();
@@ -454,7 +533,8 @@ class LowerMemRefToLLVMPass : public mlir::toy::impl::LowerMemRefToLLVMPassBase<
       LowerToyToLLVMAllocOpPattern,
       LowerToyToLLVMRandomOpPattern,
       LowerToyToLLVMCallOpPattern,
-      LowerToyToLLVMPrintOpPattern
+      LowerToyToLLVMPrintOpPattern,
+      LowerToyToLLVMTieDimsOpConverter
     >(typeConverter, &getContext());
 
     // Apply partial convertion

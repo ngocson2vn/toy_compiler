@@ -16,7 +16,7 @@ rm -fv ${OBJECT_FILE}
 # ./output/bin/compiler -debug ./add_two_vectors.toy sm_86
 # ./output/bin/compiler ./add_two_vectors.toy sm_86
 
-./output/bin/compiler ./add_two_vectors.toy sm_86 false false #-debug
+./output/bin/compiler ./add_max_vectors.toy sm_86 false false #-debug
 
 OBJECT_FILE=./output.o
 OUTPUT_FILE=./libkernel.so

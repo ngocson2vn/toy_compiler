@@ -1,20 +1,21 @@
-def add_max_vectors(a: tensor<d0xf32>, b: tensor<d0xf32>, out: tensor<d0xf32>, d0: int) {
+def add_max_vectors(a: tensor<d0xd1xf32>, b: tensor<d0xd1xf32>, out: tensor<d0xd1xf32>, d0: int, d1: int) {
   var tmp0 = add(a, b);
-  out = max(tmp0, 0.1);
+  out = max(tmp0, 0.15);
 }
 
 #
 # NOTE: THERE IS A BUG WITH 2D TENSORS
 #
 def main() {
-  var d0 : int = 256;
-  var a : tensor<d0xf32>;
-  var b : tensor<d0xf32>;
-  var out : tensor<d0xf32>;
+  var d0 : int = 8;
+  var d1 : int = 32;
+  var a : tensor<d0xd1xf32>;
+  var b : tensor<d0xd1xf32>;
+  var out : tensor<d0xd1xf32>;
 
   random(a);
   random(b);
-  add_max_vectors(a, b, out, d0);
+  add_max_vectors(a, b, out, d0, d1);
 
   print(a);
   print(b);

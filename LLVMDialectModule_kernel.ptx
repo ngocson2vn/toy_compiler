@@ -6,43 +6,45 @@
 .target sm_86
 .address_size 64
 
-	// .globl	add_two_vectors_kernel
+	// .globl	add_max_vectors_kernel
 
-.visible .entry add_two_vectors_kernel(
-	.param .u64 add_two_vectors_kernel_param_0,
-	.param .u64 .ptr .align 1 add_two_vectors_kernel_param_1,
-	.param .u64 .ptr .align 1 add_two_vectors_kernel_param_2,
-	.param .u64 .ptr .align 1 add_two_vectors_kernel_param_3
+.visible .entry add_max_vectors_kernel(
+	.param .u64 add_max_vectors_kernel_param_0,
+	.param .u64 add_max_vectors_kernel_param_1,
+	.param .u64 .ptr .align 1 add_max_vectors_kernel_param_2,
+	.param .u64 .ptr .align 1 add_max_vectors_kernel_param_3,
+	.param .u64 .ptr .align 1 add_max_vectors_kernel_param_4
 )
-.maxntid 512, 1, 1
+.maxntid 128, 1, 1
 {
 	.reg .pred 	%p<2>;
-	.reg .b32 	%r<6>;
+	.reg .b32 	%r<7>;
 	.reg .b64 	%rd<16>;
 
-	ld.param.b64 	%rd4, [add_two_vectors_kernel_param_0];
-	ld.param.b64 	%rd5, [add_two_vectors_kernel_param_3];
-	cvta.to.global.u64 	%rd6, %rd5;
-	ld.param.b64 	%rd7, [add_two_vectors_kernel_param_1];
-	ld.param.b64 	%rd8, [add_two_vectors_kernel_param_2];
-	cvta.to.global.u64 	%rd9, %rd8;
-	cvta.to.global.u64 	%rd10, %rd7;
+	ld.param.b64 	%rd6, [add_max_vectors_kernel_param_0];
+	ld.param.b64 	%rd7, [add_max_vectors_kernel_param_2];
+	cvta.to.global.u64 	%rd1, %rd7;
+	ld.param.b64 	%rd8, [add_max_vectors_kernel_param_3];
+	cvta.to.global.u64 	%rd2, %rd8;
+	ld.param.b64 	%rd9, [add_max_vectors_kernel_param_4];
+	cvta.to.global.u64 	%rd3, %rd9;
 	mov.u32 	%r1, %ctaid.x;
 	mov.u32 	%r2, %tid.x;
-	cvt.u64.u32 	%rd11, %r2;
-	mul.wide.u32 	%rd12, %r1, 512;
-	sub.s64 	%rd13, %rd4, %rd12;
-	setp.le.s64 	%p1, %rd13, %rd11;
+	cvt.u64.u32 	%rd4, %r2;
+	mul.wide.u32 	%rd5, %r1, 128;
+	sub.s64 	%rd10, %rd6, %rd5;
+	setp.le.s64 	%p1, %rd10, %rd4;
 	@%p1 bra 	$L__BB0_2;
-	or.b64 	%rd14, %rd12, %rd11;
-	shl.b64 	%rd15, %rd14, 2;
-	add.s64 	%rd1, %rd6, %rd15;
-	add.s64 	%rd2, %rd9, %rd15;
-	add.s64 	%rd3, %rd10, %rd15;
-	ld.global.b32 	%r3, [%rd3];
-	ld.global.b32 	%r4, [%rd2];
+	or.b64 	%rd11, %rd5, %rd4;
+	shl.b64 	%rd12, %rd11, 2;
+	add.s64 	%rd13, %rd1, %rd12;
+	ld.global.b32 	%r3, [%rd13];
+	add.s64 	%rd14, %rd2, %rd12;
+	ld.global.b32 	%r4, [%rd14];
 	add.rn.f32 	%r5, %r3, %r4;
-	st.global.b32 	[%rd1], %r5;
+	max.NaN.f32 	%r6, %r5, 0f3E19999A;
+	add.s64 	%rd15, %rd3, %rd12;
+	st.global.b32 	[%rd15], %r6;
 $L__BB0_2:
 	ret;
 
