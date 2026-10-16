@@ -90,7 +90,7 @@ static void registerRequiredExtensions(DialectRegistry& registry) {
   mlir::gpu::registerOffloadingLLVMTranslationInterfaceExternalModels(registry);
 }
 
-llvm::LogicalResult lower(ModuleOp& module, const std::string& targetArch) {
+llvm::LogicalResult lower(ModuleOp& module, const std::string& targetArch, const std::string& libRuntimePath) {
   auto& context = *module.getContext();
 
   // Load necessary dialects
@@ -126,6 +126,10 @@ llvm::LogicalResult lower(ModuleOp& module, const std::string& targetArch) {
   //============================================================================
   // Lower Loops to GPU
   //============================================================================
+  pm.addNestedPass<func::FuncOp>(::mlir::toy::createCollapseParallelLoopsTo1DPass());
+  pm.addPass(mlir::createCanonicalizerPass());
+  pm.addPass(mlir::createCSEPass());
+
   mlir::SmallVector<int64_t> tileSizes{128};
   pm.addNestedPass<func::FuncOp>(::mlir::toy::createTileLoopsPass(tileSizes));
   pm.addNestedPass<func::FuncOp>(mlir::createGpuMapParallelLoopsPass());
@@ -133,7 +137,6 @@ llvm::LogicalResult lower(ModuleOp& module, const std::string& targetArch) {
   
   // memref parameters -> llvm pointers
   pm.addPass(mlir::toy::createLowerMemRefToLLVMPass());
-
   pm.addPass(mlir::createCanonicalizerPass());
   pm.addPass(mlir::createCSEPass());
 
@@ -176,8 +179,13 @@ llvm::LogicalResult lower(ModuleOp& module, const std::string& targetArch) {
   //============================================================================
   // Lower GPUModuleOp to CUBIN
   //============================================================================
+  std::string cudaArch = targetArch;
+  if (targetArch == "-") {
+    cudaArch = cuda::getComputeCapability();
+  }
+  llvm::outs() << "\nTarget SM arch: " << cudaArch << "\n";
   mlir::GpuNVVMAttachTargetOptions nvvmTargetOptions;
-  nvvmTargetOptions.chip = targetArch;
+  nvvmTargetOptions.chip = cudaArch;
   nvvmTargetOptions.features = cuda::getFeatures();
   pm.addPass(mlir::createGpuNVVMAttachTarget(nvvmTargetOptions));
 
@@ -196,6 +204,10 @@ llvm::LogicalResult lower(ModuleOp& module, const std::string& targetArch) {
 
   mlir::toy::LowerLLVMToObjectPassOptions objectPassOptions;
   pm.addPass(mlir::toy::createLowerLLVMToObjectPass(objectPassOptions));
+
+  mlir::toy::LowerObjectToBinaryPassOptions binaryPassOptions;
+  binaryPassOptions.libRuntimePath = libRuntimePath;
+  pm.addPass(mlir::toy::createLowerObjectToBinaryPass(binaryPassOptions));
 
   // Apply passes
   if (failed(pm.run(module))) {

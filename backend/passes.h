@@ -17,6 +17,10 @@ namespace toy {
 #define GEN_PASS_DECL
 #include "backend/passes.h.inc"
 
+// Collapse Parallel Loops to 1D before tiling them.
+// Otherwise tiling will produce incorrect loops
+std::unique_ptr<OperationPass<func::FuncOp>> createCollapseParallelLoopsTo1DPass();
+
 // Creates a TileLoopsPass with tiles sizes provided through `tile_sizes`
 // and unroll factors provided through `unroll_factors`.
 std::unique_ptr<OperationPass<func::FuncOp>> createTileLoopsPass(

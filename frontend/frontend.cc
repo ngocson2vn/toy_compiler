@@ -155,7 +155,6 @@ private:
     auto protoArgs = funcAST.getProto()->getArgs();
     for (const auto nameValue : llvm::zip(protoArgs, entryBlock.getArguments())) {
       auto argName = std::get<0>(nameValue)->getName();
-      llvm::outs() << "Registering arg " << argName << "\n";
       if (failed(declare(argName, std::get<1>(nameValue))))
         return nullptr;
     }
@@ -248,11 +247,20 @@ private:
   /// print(x).
   mlir::Value mlirGen(PrintExprAST &call) {
     auto arg = call.getArg();
+    StringRef argName = "";
+    if (auto varExpr = dyn_cast<VariableExprAST>(arg)) {
+      argName = varExpr->getName();
+    }
+
     auto argVal = mlirGen(*arg);
     if (!argVal)
       return nullptr;
 
     auto v = builder.create<mlir::toy::PrintOp>(loc(call.loc()), builder.getI64Type(), argVal);
+    if (!argName.empty()) {
+      v->setAttr("argName", builder.getStringAttr(argName));
+    }
+
     return v;
   }
 
@@ -714,7 +722,7 @@ mlir::LogicalResult canonicalize(mlir::ModuleOp module) {
 }
 
 // The public API for codegen.
-mlir::OwningOpRef<mlir::ModuleOp> getModule(mlir::MLIRContext& context, const std::string& inputFilename) {
+mlir::OwningOpRef<mlir::ModuleOp> getModule(mlir::MLIRContext& context, const std::string& inputFilename, bool shouldDumpAST) {
   // Load our Dialect in this MLIR Context.
   mlir::DialectRegistry registry;
   registry.insert<
@@ -730,7 +738,9 @@ mlir::OwningOpRef<mlir::ModuleOp> getModule(mlir::MLIRContext& context, const st
   if (!moduleAST)
     return nullptr;
 
-  dumpAST(*moduleAST);
+  if (shouldDumpAST) {
+    dumpAST(*moduleAST);
+  }
 
   // Generate MLIR ModuleOp from Toy AST
   mlir::OwningOpRef<mlir::ModuleOp> module = mlirGen(context, *moduleAST);

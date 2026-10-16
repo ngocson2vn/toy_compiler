@@ -113,10 +113,10 @@ LogicalResult lower(mlir::ModuleOp& module) {
   pm.addPass(mlir::createCanonicalizerPass());
   pm.addPass(mlir::createCSEPass());
 
-  // Fold toy::TieDimsOp ops
-  pm.addPass(mlir::toy::createFoldTieDimsOpPass());
-  pm.addPass(mlir::createCanonicalizerPass());
-  pm.addPass(mlir::createCSEPass());
+  // // Fold toy::TieDimsOp ops
+  // pm.addPass(mlir::toy::createFoldTieDimsOpPass());
+  // pm.addPass(mlir::createCanonicalizerPass());
+  // pm.addPass(mlir::createCSEPass());
 
   // Apply the pass
   if (failed(pm.run(module))) {

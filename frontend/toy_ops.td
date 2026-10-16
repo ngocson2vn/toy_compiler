@@ -82,7 +82,7 @@ def Toy_PrintOp : Op<Toy_Dialect, "print"> {
   let description = [{
     This operation print a number or a tensor.
   }];
-  let arguments = (ins AnyTypeOf<[I32, F32, F32Tensor, AnyMemRef]>:$arg);
+  let arguments = (ins AnyTypeOf<[I32, F32, I32Tensor, F32Tensor, AnyMemRef]>:$arg);
   let results = (outs I64:$result);
 
   let assemblyFormat = "$arg `:` type($arg) attr-dict `->` type($result)";
@@ -126,8 +126,8 @@ def Toy_TieDimsOp : Op<Toy_Dialect, "tie_dims"> {
   let description = [{
     This operation tie dims with a tensor.
   }];
-  let arguments = (ins AnyTypeOf<[F32Tensor, AnyMemRef]>:$arg, Variadic<Index>:$dims);
-  let results = (outs AnyTypeOf<[F32Tensor, AnyMemRef]>:$result);
+  let arguments = (ins AnyTypeOf<[I32Tensor, F32Tensor, AnyMemRef]>:$arg, Variadic<Index>:$dims);
+  let results = (outs AnyTypeOf<[I32Tensor, F32Tensor, AnyMemRef]>:$result);
 
   let assemblyFormat = "$arg `,` $dims `:` type($arg) `,` type($dims) attr-dict `->` type($result)";
 
@@ -146,8 +146,8 @@ def Toy_AddOp : Op<Toy_Dialect, "add"> {
   let description = [{
     This operation computes the sum of two tensors element-wise.
   }];
-  let arguments = (ins F32Tensor:$lhs, F32Tensor:$rhs);
-  let results = (outs F32Tensor:$result);
+  let arguments = (ins AnyTypeOf<[I32Tensor, F32Tensor]>:$lhs, AnyTypeOf<[I32Tensor, F32Tensor]>:$rhs);
+  let results = (outs AnyTypeOf<[I32Tensor, F32Tensor]>:$result);
 
   let assemblyFormat = "$lhs `,` $rhs `:` type($lhs) `,` type($rhs) attr-dict `->` type($result)";
 
@@ -164,8 +164,8 @@ def Toy_MaxOp : Op<Toy_Dialect, "max"> {
   let description = [{
     This operation computes the maximum of two tensors element-wise.
   }];
-  let arguments = (ins F32Tensor:$lhs, AnyTypeOf<[F32Tensor, F32]>:$rhs);
-  let results = (outs F32Tensor:$result);
+  let arguments = (ins AnyTypeOf<[I32Tensor, F32Tensor]>:$lhs, AnyTypeOf<[F32Tensor, F32]>:$rhs);
+  let results = (outs AnyTypeOf<[I32Tensor, F32Tensor]>:$result);
 
   let assemblyFormat = "$lhs `,` $rhs `:` type($lhs) `,` type($rhs) attr-dict `->` type($result)";
 
@@ -183,7 +183,7 @@ def Toy_AllocOp : Op<Toy_Dialect, "alloc"> {
     This operation generates random elements for a tensor.
   }];
   let arguments = (ins Variadic<Index>:$dims);
-  let results = (outs AnyTypeOf<[F32Tensor, AnyMemRef]>:$result);
+  let results = (outs AnyTypeOf<[I32Tensor, F32Tensor, AnyMemRef]>:$result);
 
   let assemblyFormat = "$dims `:` attr-dict `->` type($result)";
 
@@ -205,8 +205,8 @@ def Toy_RandomOp : Op<Toy_Dialect, "random"> {
   let description = [{
     This operation generates random elements for a tensor.
   }];
-  let arguments = (ins AnyTypeOf<[F32Tensor, AnyMemRef]>:$arg);
-  let results = (outs AnyTypeOf<[F32Tensor, AnyMemRef]>:$result);
+  let arguments = (ins AnyTypeOf<[I32Tensor, F32Tensor, AnyMemRef]>:$arg);
+  let results = (outs AnyTypeOf<[I32Tensor, F32Tensor, AnyMemRef]>:$result);
 
   let assemblyFormat = "$arg `:` type($arg) attr-dict `->` type($result)";
 }
@@ -216,8 +216,8 @@ def Toy_StoreOp : Op<Toy_Dialect, "store"> {
   let description = [{
     This operation store source tensor into destination tensor.
   }];
-  let arguments = (ins F32Tensor:$src, F32Tensor:$dst);
-  let results = (outs F32Tensor:$result);
+  let arguments = (ins AnyTypeOf<[I32Tensor, F32Tensor]>:$src, AnyTypeOf<[I32Tensor, F32Tensor]>:$dst);
+  let results = (outs AnyTypeOf<[I32Tensor, F32Tensor]>:$result);
 
   let assemblyFormat = "$src `,` $dst `:` type($src) `,` type($dst) attr-dict `->` type($result)";
 }
@@ -240,7 +240,7 @@ def Toy_ReturnOp : Op<Toy_Dialect, "return", [HasParent<"FuncOp">, Terminator]> 
 
   // The return operation takes an optional input operand to return. This
   // value must match the return type of the enclosing function.
-  let arguments = (ins Variadic<F32Tensor>:$input);
+  let arguments = (ins Variadic<AnyType>:$input);
 
   // The return operation only emits the input in the format if it is present.
   let assemblyFormat = "($input^ `:` type($input))? attr-dict ";

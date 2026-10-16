@@ -4,28 +4,28 @@ target datalayout = "e-p6:32:32-i64:64-i128:128-i256:256-v16:16-v32:32-n16:32:64
 target triple = "nvptx64-nvidia-cuda"
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
-define ptx_kernel void @add_two_vectors_kernel(i64 %0, ptr readonly captures(none) %1, ptr readonly captures(none) %2, ptr writeonly captures(none) %3) local_unnamed_addr #0 {
-  %5 = tail call i32 @llvm.nvvm.read.ptx.sreg.ctaid.x()
-  %6 = zext nneg i32 %5 to i64
-  %7 = tail call range(i32 0, 128) i32 @llvm.nvvm.read.ptx.sreg.tid.x()
-  %8 = zext nneg i32 %7 to i64
-  %9 = shl nuw nsw i64 %6, 7
-  %10 = sub i64 %0, %9
-  %11 = icmp sgt i64 %10, %8
-  br i1 %11, label %12, label %20
+define ptx_kernel void @add_two_vectors_kernel(i64 %0, i64 %1, ptr readonly captures(none) %2, ptr readonly captures(none) %3, ptr writeonly captures(none) %4) local_unnamed_addr #0 {
+  %6 = tail call i32 @llvm.nvvm.read.ptx.sreg.ctaid.x()
+  %7 = zext nneg i32 %6 to i64
+  %8 = tail call range(i32 0, 128) i32 @llvm.nvvm.read.ptx.sreg.tid.x()
+  %9 = zext nneg i32 %8 to i64
+  %10 = shl nuw nsw i64 %7, 7
+  %11 = sub i64 %0, %10
+  %12 = icmp sgt i64 %11, %9
+  br i1 %12, label %13, label %21
 
-12:                                               ; preds = %4
-  %13 = or disjoint i64 %9, %8
-  %14 = getelementptr float, ptr %3, i64 %13
-  %15 = getelementptr float, ptr %2, i64 %13
-  %16 = getelementptr float, ptr %1, i64 %13
-  %17 = load float, ptr %16, align 4
-  %18 = load float, ptr %15, align 4
-  %19 = fadd float %17, %18
-  store float %19, ptr %14, align 4
-  br label %20
+13:                                               ; preds = %5
+  %14 = or disjoint i64 %10, %9
+  %15 = getelementptr i32, ptr %2, i64 %14
+  %16 = load i32, ptr %15, align 4
+  %17 = getelementptr i32, ptr %3, i64 %14
+  %18 = load i32, ptr %17, align 4
+  %19 = add i32 %18, %16
+  %20 = getelementptr i32, ptr %4, i64 %14
+  store i32 %19, ptr %20, align 4
+  br label %21
 
-20:                                               ; preds = %12, %4
+21:                                               ; preds = %13, %5
   ret void
 }
 

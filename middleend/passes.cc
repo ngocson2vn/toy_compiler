@@ -11,6 +11,7 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 #include "llvm/Support/Debug.h"
 #define DEBUG_TYPE "middleend-passes"
@@ -109,6 +110,7 @@ struct ToyAddOpConverter : public OpConversionPattern<toy::AddOp> {
 
     auto out = op.getResult();
     auto resultType = cast<RankedTensorType>(out.getType());
+    auto elemType = resultType.getElementType();
     int64_t rank = resultType.getRank();
 
     // Create output tensor
@@ -147,7 +149,14 @@ struct ToyAddOpConverter : public OpConversionPattern<toy::AddOp> {
       [&](OpBuilder &nestedBuilder, Location loc, ValueRange args) {
         Value xVal = args[0];
         Value yVal = args[1];
-        Value result = nestedBuilder.create<arith::AddFOp>(loc, xVal, yVal);
+        Value result;
+        if (elemType.isF32() || elemType.isF16()) {
+          result = nestedBuilder.create<arith::AddFOp>(loc, xVal, yVal);
+        } else if (elemType.isInteger()) {
+          result = nestedBuilder.create<arith::AddIOp>(loc, xVal, yVal);
+        } else {
+          llvm_unreachable("Unsupported type");
+        }
         // nestedBuilder.create<linalg::YieldOp>(loc);
         nestedBuilder.create<linalg::YieldOp>(loc, result);
       }
@@ -178,6 +187,7 @@ struct ToyMaxOpConverter : public OpConversionPattern<toy::MaxOp> {
 
     auto out = op.getResult();
     auto resultType = cast<RankedTensorType>(out.getType());
+    auto elemType = resultType.getElementType();
     int64_t rank = resultType.getRank();
 
     // Create output tensor
@@ -210,13 +220,28 @@ struct ToyMaxOpConverter : public OpConversionPattern<toy::MaxOp> {
       indexingMaps.push_back(xIndexMap); // out
       inputs.push_back(y);
       build_fn = [&](OpBuilder &nestedBuilder, Location loc, ValueRange args) {
-        Value result = nestedBuilder.create<arith::MaximumFOp>(loc, args[0], args[1]);
+        Value result;
+        if (elemType.isF32() || elemType.isF16()) {
+          result = nestedBuilder.create<arith::MaximumFOp>(loc, args[0], args[1]);
+        } else if (elemType.isInteger()) {
+          result = nestedBuilder.create<arith::MaxSIOp>(loc, args[0], args[1]);
+        } else {
+          llvm_unreachable("Unsupported type");
+        }
+
         nestedBuilder.create<linalg::YieldOp>(loc, result);
       };
     } else if (y.getDefiningOp<toy::ConstantOp>()) {
       indexingMaps.push_back(xIndexMap); // out
       build_fn = [&](OpBuilder &nestedBuilder, Location loc, ValueRange args) {
-        Value result = nestedBuilder.create<arith::MaximumFOp>(loc, args[0], y);
+        Value result;
+        if (elemType.isF32() || elemType.isF16()) {
+          result = nestedBuilder.create<arith::MaximumFOp>(loc, args[0], y);
+        } else if (elemType.isInteger()) {
+          result = nestedBuilder.create<arith::MaxSIOp>(loc, args[0], y);
+        } else {
+          llvm_unreachable("Unsupported type");
+        }
         nestedBuilder.create<linalg::YieldOp>(loc, result);
       };
     } else {
@@ -462,7 +487,7 @@ struct TensorToMemRefConverter : public TypeConverter {
           SmallVector<Value> tgtValues;
           for (const auto& [t, v] : llvm::zip(resultTypes, srcValues)) {
             auto ret = builder.create<UnrealizedConversionCastOp>(loc, t, v);
-            llvm::outs() << "\nMaterialized " << ret << "\n";
+            // llvm::outs() << "\nMaterialized " << ret << "\n";
             tgtValues.push_back(ret.getOutputs()[0]);
           }
 
@@ -644,6 +669,8 @@ struct ToyPrintOpMemRefConverter : public OpConversionPattern<toy::PrintOp> {
       op.getType(),
       adaptor.getArg()
     );
+
+    newOp->setAttrs(op->getAttrs());
 
     rewriter.replaceOp(op, newOp);
     return success();

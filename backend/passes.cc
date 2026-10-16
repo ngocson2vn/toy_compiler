@@ -24,6 +24,10 @@
 #include "llvm/TargetParser/Host.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/CodeGen/CommandFlags.h"
+
+#include "lld/Common/Driver.h"
+LLD_HAS_DRIVER(elf);
+
 #define DEBUG_TYPE "backend-passes"
 
 #include "passes.h"
@@ -42,6 +46,7 @@ namespace mlir::toy {
 #define GEN_PASS_DEF_DUMPGPUMODULEPASS
 #define GEN_PASS_DEF_INJECTRUNTIMECTXPASS
 #define GEN_PASS_DEF_LOWERLLVMTOOBJECTPASS
+#define GEN_PASS_DEF_LOWEROBJECTTOBINARYPASS
 #include "backend/passes.h.inc"
 
 } // namespace mlir::toy
@@ -53,6 +58,7 @@ namespace backend {
 namespace {
 
 static constexpr char kMainFuncName[] = "main";
+static bool hasMain = false;
 
 struct LowerMemRefToLLVMFuncOpPattern : public mlir::OpConversionPattern<func::FuncOp> {  
   using OpConversionPattern<func::FuncOp>::OpConversionPattern;
@@ -139,13 +145,44 @@ struct LowerMemRefToLLVMLoadOpPattern : public OpConversionPattern<memref::LoadO
   using OpConversionPattern<memref::LoadOp>::OpConversionPattern;
 
   LogicalResult matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor, ConversionPatternRewriter &rewriter) const override {
+    auto loc = loadOp.getLoc();
+    auto memref = loadOp.getMemRef();
+    auto tieOp = memref.getDefiningOp<mlir::toy::TieDimsOp>();
+    if (!tieOp) {
+      llvm::errs() << "ERROR Invalid argument at " << loc << "\n";
+      return failure();
+    }
+
+    auto rdims = llvm::reverse(tieOp.getDims());
+    //  dims = [d0, d1, d2] -> strides = [d1 * d2, d2, 1]
+    // rdims = [d2, d1, d0] -> strides = [d1 * d2, d2, 1]
+
+    SmallVector<Value> strides;
+    auto c1 = rewriter.create<LLVM::ConstantOp>(loc, rewriter.getI64Type(), 1);
+
+    Value s = c1;
+    strides.insert(strides.begin(), s);
+    for (auto it = rdims.begin(); it != (rdims.end() - 1); it++) {
+      Value rhs = rewriter.create<arith::IndexCastOp>(loc, rewriter.getI64Type(), *it);
+      s = rewriter.create<LLVM::MulOp>(loc, s, rhs);
+      strides.insert(strides.begin(), s);
+    }
+
     auto elemType = loadOp.getMemRefType().getElementType();
     auto resType = LLVM::LLVMPointerType::get(getContext());
-    auto operands = adaptor.getOperands();
+
+    Value linearIdx = rewriter.create<LLVM::ConstantOp>(loc, rewriter.getI64Type(), 0);
+    for (const auto& [i, s] : llvm::zip(adaptor.getIndices(), strides)) {
+      Value tmpVal = rewriter.create<LLVM::MulOp>(loc, i, s);
+      linearIdx = rewriter.create<LLVM::AddOp>(loc, tmpVal, linearIdx);
+    }
+
+    // Already converted to LLVM::LLVMPointerType
+    auto basePtr = adaptor.getMemref();
 
     // Type resultType, Type elementType, Value basePtr, ValueRange indices
-    auto loadPtr = rewriter.create<LLVM::GEPOp>(loadOp.getLoc(), resType, elemType, operands[0], operands[1]);
-    auto newOp = rewriter.create<LLVM::LoadOp>(loadOp.getLoc(), elemType, loadPtr);
+    auto loadPtr = rewriter.create<LLVM::GEPOp>(loc, resType, elemType, basePtr, ValueRange{linearIdx});
+    auto newOp = rewriter.create<LLVM::LoadOp>(loc, elemType, loadPtr);
     rewriter.replaceOp(loadOp, newOp);
 
     return success();
@@ -156,13 +193,44 @@ struct LowerMemRefToLLVMStoreOpPattern : public OpConversionPattern<memref::Stor
   using OpConversionPattern<memref::StoreOp>::OpConversionPattern;
 
   LogicalResult matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor, ConversionPatternRewriter &rewriter) const override {
+    auto loc = storeOp.getLoc();
+    auto memref = storeOp.getMemRef();
+    auto tieOp = memref.getDefiningOp<mlir::toy::TieDimsOp>();
+    if (!tieOp) {
+      llvm::errs() << "ERROR Invalid argument at " << loc << "\n";
+      return failure();
+    }
+
+    auto rdims = llvm::reverse(tieOp.getDims());
+    //  dims = [d0, d1, d2] -> strides = [d1 * d2, d2, 1]
+    // rdims = [d2, d1, d0] -> strides = [d1 * d2, d2, 1]
+
+    SmallVector<Value> strides;
+    auto c1 = rewriter.create<LLVM::ConstantOp>(loc, rewriter.getI64Type(), 1);
+
+    Value s = c1;
+    strides.insert(strides.begin(), s);
+    for (auto it = rdims.begin(); it != (rdims.end() - 1); it++) {
+      Value rhs = rewriter.create<arith::IndexCastOp>(loc, rewriter.getI64Type(), *it);
+      s = rewriter.create<LLVM::MulOp>(loc, s, rhs);
+      strides.insert(strides.begin(), s);
+    }
+
     auto elemType = storeOp.getMemRefType().getElementType();
     auto resType = LLVM::LLVMPointerType::get(getContext());
-    auto operands = adaptor.getOperands();
+
+    Value linearIdx = rewriter.create<LLVM::ConstantOp>(loc, rewriter.getI64Type(), 0);
+    for (const auto& [i, s] : llvm::zip(adaptor.getIndices(), strides)) {
+      Value tmpVal = rewriter.create<LLVM::MulOp>(loc, i, s);
+      linearIdx = rewriter.create<LLVM::AddOp>(loc, tmpVal, linearIdx);
+    }
+
+    // Already converted to LLVM::LLVMPointerType
+    auto basePtr = adaptor.getMemref();
 
     // Type resultType, Type elementType, Value basePtr, ValueRange indices
-    auto storePtr = rewriter.create<LLVM::GEPOp>(storeOp.getLoc(), resType, elemType, operands[1], operands[2]);
-    auto newOp = rewriter.create<LLVM::StoreOp>(storeOp.getLoc(), operands[0], storePtr);
+    auto storePtr = rewriter.create<LLVM::GEPOp>(loc, resType, elemType, basePtr, ValueRange{linearIdx});
+    auto newOp = rewriter.create<LLVM::StoreOp>(loc, adaptor.getValue(), storePtr);
     rewriter.replaceOp(storeOp, newOp);
 
     return success();
@@ -330,15 +398,36 @@ struct LowerToyToLLVMPrintOpPattern : public OpConversionPattern<mlir::toy::Prin
                               );
     args.push_back(encodedElemTypeVal);
 
+    // argName
+    int argNameLen = 1;
+    auto argName = dyn_cast_or_null<StringAttr>(printOp->getAttr("argName"));
+    std::string argNameStr = "";
+    if (!!argName) {
+      argNameLen = argName.size() + 1; // +1 for '\0' character
+      argNameStr = argName.str();
+    }
+    argNameStr.push_back('\0');
+
+    auto i8Type = IntegerType::get(context, 8);
+    auto i32Type = IntegerType::get(context, 32);
+    auto i64Type = IntegerType::get(context, 64);
+    auto ptrType = LLVM::LLVMPointerType::get(context);
+    auto argNameType = LLVM::LLVMArrayType::get(i8Type, argNameLen);
+    auto argNameVal = rewriter.create<LLVM::ConstantOp>(loc, argNameType, rewriter.getStringAttr(argNameStr));
+    auto c1 = rewriter.create<LLVM::ConstantOp>(loc, i32Type, 1);
+    auto argNamePtr  = rewriter.create<LLVM::AllocaOp>(loc, ptrType, argNameType, c1);
+    rewriter.create<LLVM::StoreOp>(loc, argNameVal, argNamePtr);
+
+    // auto c0 = rewriter.create<LLVM::ConstantOp>(loc, i32Type, 0);
+    // auto argNamePtr = rewriter.create<LLVM::GEPOp>(loc, ptrType, i8Type, argNameVal, ValueRange{c0});
+    args.push_back(argNamePtr);
+
     auto moduleOp = printOp->getParentOfType<mlir::ModuleOp>();
     LLVM::LLVMFuncOp printFuncOp = dyn_cast_or_null<LLVM::LLVMFuncOp>(moduleOp.lookupSymbol(kPrintFuncName));
     if (!printFuncOp) {
       rewriter.setInsertionPointToStart(moduleOp.getBody());
 
-      auto i32Type = IntegerType::get(context, 32);
-      auto i64Type = IntegerType::get(context, 64);
-      auto ptrType = LLVM::LLVMPointerType::get(context);
-      auto printFuncType = LLVM::LLVMFunctionType::get(i64Type, llvm::ArrayRef<mlir::Type>{ptrType, i32Type, i32Type});
+      auto printFuncType = LLVM::LLVMFunctionType::get(i64Type, llvm::ArrayRef<mlir::Type>{ptrType, i32Type, i32Type, ptrType});
       printFuncOp = rewriter.create<LLVM::LLVMFuncOp>(loc, kPrintFuncName, printFuncType, LLVM::Linkage::External);
     }
 
@@ -389,6 +478,23 @@ struct LowerMemRefToLLVMTypeConverter : public TypeConverter {
   }
 };
 
+struct LowerToyToLLVMTieDimsOpConverter : public OpConversionPattern<mlir::toy::TieDimsOp> {
+  using OpConversionPattern<mlir::toy::TieDimsOp>::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(
+      mlir::toy::TieDimsOp op, OpAdaptor adaptor,
+      ConversionPatternRewriter &rewriter) const override {
+    auto arg = adaptor.getArg();
+    if (isa<BlockArgument>(arg)) {
+      rewriter.replaceOp(op, arg);
+    } else if (op.getResult().getNumUses() == 0) {
+      rewriter.eraseOp(op);
+    }
+
+    return success();
+  }
+};
+
 class LowerMemRefToLLVMPass : public mlir::toy::impl::LowerMemRefToLLVMPassBase<LowerMemRefToLLVMPass> {
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<LLVM::LLVMDialect>();
@@ -396,6 +502,9 @@ class LowerMemRefToLLVMPass : public mlir::toy::impl::LowerMemRefToLLVMPassBase<
 
   void runOnOperation() override {
     auto module = getOperation();
+    if (!!module.lookupSymbol(kMainFuncName)) {
+      hasMain = true;
+    }
 
     // Define type converter
     LowerMemRefToLLVMTypeConverter typeConverter;
@@ -433,7 +542,8 @@ class LowerMemRefToLLVMPass : public mlir::toy::impl::LowerMemRefToLLVMPassBase<
       LowerToyToLLVMAllocOpPattern,
       LowerToyToLLVMRandomOpPattern,
       LowerToyToLLVMCallOpPattern,
-      LowerToyToLLVMPrintOpPattern
+      LowerToyToLLVMPrintOpPattern,
+      LowerToyToLLVMTieDimsOpConverter
     >(typeConverter, &getContext());
 
     // Apply partial convertion
@@ -752,6 +862,59 @@ class LowerLLVMToObjectPass : public mlir::toy::impl::LowerLLVMToObjectPassBase<
     HostModuleToObject trantor(moduleOp, triple, chip);
     if (failed(trantor.emitObjectFile(objectFilePath))) {
       signalPassFailure();
+    }
+  }
+};
+
+class LowerObjectToBinaryPass : public mlir::toy::impl::LowerObjectToBinaryPassBase<LowerObjectToBinaryPass> {
+ public:
+  LowerObjectToBinaryPass() = default;
+
+  LowerObjectToBinaryPass(const mlir::toy::LowerObjectToBinaryPassOptions& options)
+    : LowerObjectToBinaryPassBase(options) {}
+
+  void runOnOperation() override {
+    auto moduleOp = getOperation();
+    auto rpath = std::filesystem::path(
+                      libRuntimePath.getValue()).parent_path().string();
+    std::string outputFile = hasMain ? "./main" : "./libkernel.so";
+    std::string libUnwindPath = rpath + "/libunwind.a";
+    std::string libClangRtPath = rpath + "/libclang_rt.builtins.a";
+    std::vector<const char *> args;
+    if (hasMain) {
+      args = {
+        "ld.lld",
+        "-pie",
+        "--dynamic-linker=/lib64/ld-linux-x86-64.so.2",
+        "--no-dependent-libraries",
+        "-rpath", rpath.c_str(),
+        "-o", outputFile.c_str(),
+        "/usr/lib/x86_64-linux-gnu/Scrt1.o",      // dynamic-PIE startup (not rcrt1.o)
+        "/usr/lib/x86_64-linux-gnu/crti.o",       // first
+        objectFilePath.getValue().c_str(),
+        libRuntimePath.getValue().c_str(),
+        libUnwindPath.c_str(),
+        libClangRtPath.c_str(),
+        "-L/lib/x86_64-linux-gnu",
+        "-lc",
+        "-lm",
+        "-lcuda",
+        "/lib/x86_64-linux-gnu/libstdc++.so.6",
+        "/usr/lib/x86_64-linux-gnu/crtn.o"
+      };
+    } else {
+      args = {
+        "ld.lld",
+        "-shared",
+        "-o", outputFile.c_str(),
+        objectFilePath.getValue().c_str()
+      };
+    }
+
+    auto res = lld::lldMain(args, llvm::outs(), llvm::errs(), 
+                              {{lld::Gnu, &lld::elf::link}});
+    if (res.retCode == 0) {
+      llvm::outs() << "Output: " << outputFile << "\n";
     }
   }
 };

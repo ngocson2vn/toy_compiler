@@ -28,7 +28,7 @@ namespace toy {
 namespace compiler {
 namespace frontend {
 
-mlir::OwningOpRef<mlir::ModuleOp> getModule(mlir::MLIRContext& context, const std::string& inputFilename);
+mlir::OwningOpRef<mlir::ModuleOp> getModule(mlir::MLIRContext& context, const std::string& inputFilename, bool shouldDumpAST);
 
 } // namespace frontend
 } // namespace compiler

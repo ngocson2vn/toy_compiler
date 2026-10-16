@@ -43,12 +43,21 @@ limitations under the License.
 namespace mlir {
 namespace toy {
 
+#define GEN_PASS_DEF_COLLAPSEPARALLELLOOPSTO1DPASS
 #define GEN_PASS_DEF_TILELOOPSPASS
 #include "backend/passes.h.inc"
 
 using ::mlir::scf::ParallelOp;
 
 namespace {
+
+// This is the implementation of the CollapseParallelLoopsTo1D pass declared in
+//  include/mlir-hlo/Transforms/passes.td
+struct CollapseParallelLoopsTo1D
+    : public impl::CollapseParallelLoopsTo1DPassBase<
+          CollapseParallelLoopsTo1D> {
+  void runOnOperation() override;
+};
 
 // This is the implementation of the TileLoops pass declared in
 //  include/mlir-hlo/Transforms/passes.td
@@ -66,6 +75,18 @@ class TileLoopsPass : public impl::TileLoopsPassBase<TileLoopsPass> {
 };
 
 }  // namespace
+
+void CollapseParallelLoopsTo1D::runOnOperation() {
+  getOperation()->walk([&](ParallelOp op) {
+    unsigned numLoops = op.getNumLoops();
+    if (numLoops == 1) return;
+    std::vector<unsigned> combinedLoops(numLoops);
+    std::iota(combinedLoops.begin(), combinedLoops.end(), 0u);
+    IRRewriter rewriter(&getContext());
+    mlir::collapseParallelLoops(rewriter, op, {combinedLoops});
+  });
+}
+
 
 // Returns whether the access pattern in `ploop` is "complex". That is, whether
 // any memref.load op in its region uses indices that don't correspond to the
@@ -143,6 +164,10 @@ void TileLoopsPass::runOnOperation() {
       ->getCanonicalizationPatterns(patterns);
   if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
     return signalPassFailure();
+}
+
+std::unique_ptr<OperationPass<func::FuncOp>> createCollapseParallelLoopsTo1DPass() {
+  return std::make_unique<CollapseParallelLoopsTo1D>();
 }
 
 std::unique_ptr<OperationPass<func::FuncOp>> createTileLoopsPass(

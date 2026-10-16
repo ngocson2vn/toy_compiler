@@ -157,6 +157,10 @@ public:
 
   const Location &loc() { return location; }
 
+  operator bool() {
+    return this != nullptr;
+  }
+
 private:
   const ExprASTKind kind;
   Location location;
