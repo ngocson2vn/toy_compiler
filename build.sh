@@ -23,6 +23,7 @@ if [ ! -f ./.llvm.build.done ]; then
 
   # -DCMAKE_BUILD_TYPE=Debug | Release \
   cmake -G Ninja -S llvm-project/llvm -B ${LLVM_BUILD_DIR} \
+    -DCMAKE_CXX_FLAGS="-Wno-unused-command-line-argument -Wno-deprecated-declarations -Wno-c2y-extensions -Wno-c2y-extensions" \
     -DCMAKE_BUILD_TYPE=Debug \
     -DLLVM_ENABLE_PROJECTS="mlir;clang;lld" \
     -DLLVM_ENABLE_RUNTIMES="compiler-rt;libunwind" \
