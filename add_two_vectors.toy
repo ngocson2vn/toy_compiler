@@ -1,19 +1,23 @@
-def add_two_vectors(a: tensor<d0xd1xi32>, b: tensor<d0xd1xi32>, out: tensor<d0xd1xi32>, d0: int, d1: int) {
-  out = add(a, b);
+# This function will be compiled into a CUDA kernel
+def add_two_vectors(a: tensor<d0xd1xi32>, b: tensor<d0xd1xi32>, c: tensor<d0xd1xi32>, d0: int, d1: int) {
+  c = add(a, b);
 }
 
 def main() {
-  var d0 : int = 16;
-  var d1 : int = 32;
-  var t1 : tensor<d0xd1xi32>;
-  var t2 : tensor<d0xd1xi32>;
-  var t3 : tensor<d0xd1xi32>;
+  var d0 : int = 4;
+  var d1 : int = 8;
+  var a : tensor<d0xd1xi32>;
+  var b : tensor<d0xd1xi32>;
+  var c : tensor<d0xd1xi32>;
 
-  random(t1);
-  random(t2);
-  add_two_vectors(t1, t2, t3, d0, d1);
+  # Generate random tensors a and b
+  random(a);
+  random(b);
 
-  print(t1);
-  print(t2);
-  print(t3);
+  # Launch add_two_vectors kernel
+  add_two_vectors(a, b, c, d0, d1);
+
+  print(a);
+  print(b);
+  print(c);
 }
