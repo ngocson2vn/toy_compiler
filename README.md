@@ -1,6 +1,53 @@
 # Toy ML Compiler
 This toy compiler is for learning MLIR and how to build an ML compiler from scratch. <br/>
-Currently, what it can do is compile a simple [add_two_vectors](./add_two_vectors.toy) function, written in a toy DSL, into a real CUDA kernel that can be launched on an NVIDIA GPU.
+Currently, what it can do is compile a simple toy function, written in a toy DSL, into a real CUDA kernel that can be launched on an NVIDIA GPU.
+<br/>
+
+**Example:**<br/>
+[add_two_vectors.toy](add_two_vectors.toy)<br/>
+```python
+# This function will be compiled into a CUDA kernel
+def add_two_vectors(a: tensor<d0xd1xi32>, b: tensor<d0xd1xi32>, c: tensor<d0xd1xi32>, d0: int, d1: int) {
+  c = add(a, b);
+}
+
+def main() {
+  var d0 : int = 4;
+  var d1 : int = 8;
+  var a : tensor<d0xd1xi32>;
+  var b : tensor<d0xd1xi32>;
+  var c : tensor<d0xd1xi32>;
+
+  # Generate random tensors a and b
+  random(a);
+  random(b);
+
+  # Launch add_two_vectors kernel
+  add_two_vectors(a, b, c, d0, d1);
+
+  print(a);
+  print(b);
+  print(c);
+}
+```
+
+Compile [add_two_vectors.toy](add_two_vectors.toy) to `./main` binary and run it:
+```bash
+# Required
+export CUDA_ROOT=/usr/local/cuda-12.4
+./output/bin/compiler ./add_two_vectors.toy
+
+./main 
+INFO Successfully initialized CUDA!
+INFO Device Compute Capability: 120
+INFO [toy_alloc] numElems=32 elemType=i32
+INFO [toy_alloc] numElems=32 elemType=i32
+INFO [toy_alloc] numElems=32 elemType=i32
+a tensor: [90, 65, 20, 91, 48, 34, 58, 51, 18, 70, 91, 19, 5, 41, 74, 70, 31, 79, 90, 95, 86, 24, 10, 47, 56, 55, 72, 22, 41, 29, 94, 93]
+b tensor: [65, 44, 58, 21, 58, 81, 19, 81, 79, 60, 5, 57, 91, 91, 77, 68, 85, 34, 11, 49, 58, 78, 80, 11, 52, 50, 64, 63, 69, 15, 38, 74]
+c tensor: [155, 109, 78, 112, 106, 115, 77, 132, 97, 130, 96, 76, 96, 132, 151, 138, 116, 113, 101, 144, 144, 102, 90, 58, 108, 105, 136, 85, 110, 44, 132, 167]
+```
+
 <br/>
 
 **Lowering Pipeline:**<br/>
