@@ -10,22 +10,6 @@ module {
     %6 = toy.store %5, %4 : tensor<?x?xi32>, tensor<?x?xi32> -> tensor<?x?xi32>
     return %6 : tensor<?x?xi32>
   }
-  func.func @main() {
-    %0 = toy.constant 4 : i32 -> i32
-    %1 = toy.constant 8 : i32 -> i32
-    %2 = arith.index_cast %0 : i32 to index
-    %3 = arith.index_cast %1 : i32 to index
-    %4 = toy.alloc %2, %3 : -> tensor<?x?xi32>
-    %5 = toy.alloc %2, %3 : -> tensor<?x?xi32>
-    %6 = toy.alloc %2, %3 : -> tensor<?x?xi32>
-    %7 = toy.random %4 : tensor<?x?xi32> -> tensor<?x?xi32>
-    %8 = toy.random %5 : tensor<?x?xi32> -> tensor<?x?xi32>
-    %9 = toy.call @add_two_vectors(%4, %5, %6, %0, %1) : (tensor<?x?xi32>, tensor<?x?xi32>, tensor<?x?xi32>, i32, i32) -> tensor<?x?xi32>
-    %10 = toy.print %4 : tensor<?x?xi32> {argName = "a"} -> i64
-    %11 = toy.print %5 : tensor<?x?xi32> {argName = "b"} -> i64
-    %12 = toy.print %6 : tensor<?x?xi32> {argName = "out"} -> i64
-    return
-  }
 }
 
 
@@ -56,22 +40,6 @@ module {
     %8 = bufferization.materialize_in_destination %7 in %4 : (tensor<?x?xi32>, tensor<?x?xi32>) -> tensor<?x?xi32>
     return %8 : tensor<?x?xi32>
   }
-  func.func @main() {
-    %0 = toy.constant 4 : i32 -> i32
-    %1 = toy.constant 8 : i32 -> i32
-    %2 = arith.index_cast %0 : i32 to index
-    %3 = arith.index_cast %1 : i32 to index
-    %4 = toy.alloc %2, %3 : -> tensor<?x?xi32>
-    %5 = toy.alloc %2, %3 : -> tensor<?x?xi32>
-    %6 = toy.alloc %2, %3 : -> tensor<?x?xi32>
-    %7 = toy.random %4 : tensor<?x?xi32> -> tensor<?x?xi32>
-    %8 = toy.random %5 : tensor<?x?xi32> -> tensor<?x?xi32>
-    %9 = toy.call @add_two_vectors(%4, %5, %6, %0, %1) : (tensor<?x?xi32>, tensor<?x?xi32>, tensor<?x?xi32>, i32, i32) -> tensor<?x?xi32>
-    %10 = toy.print %4 : tensor<?x?xi32> {argName = "a"} -> i64
-    %11 = toy.print %5 : tensor<?x?xi32> {argName = "b"} -> i64
-    %12 = toy.print %6 : tensor<?x?xi32> {argName = "out"} -> i64
-    return
-  }
 }
 
 
@@ -91,22 +59,6 @@ module {
     } -> tensor<?x?xi32>
     %6 = bufferization.materialize_in_destination %5 in %4 : (tensor<?x?xi32>, tensor<?x?xi32>) -> tensor<?x?xi32>
     return %6 : tensor<?x?xi32>
-  }
-  func.func @main() {
-    %0 = toy.constant 4 : i32 -> i32
-    %1 = toy.constant 8 : i32 -> i32
-    %2 = arith.index_cast %0 : i32 to index
-    %3 = arith.index_cast %1 : i32 to index
-    %4 = toy.alloc %2, %3 : -> tensor<?x?xi32>
-    %5 = toy.alloc %2, %3 : -> tensor<?x?xi32>
-    %6 = toy.alloc %2, %3 : -> tensor<?x?xi32>
-    %7 = toy.random %4 : tensor<?x?xi32> -> tensor<?x?xi32>
-    %8 = toy.random %5 : tensor<?x?xi32> -> tensor<?x?xi32>
-    %9 = toy.call @add_two_vectors(%4, %5, %6, %0, %1) : (tensor<?x?xi32>, tensor<?x?xi32>, tensor<?x?xi32>, i32, i32) -> tensor<?x?xi32>
-    %10 = toy.print %4 : tensor<?x?xi32> {argName = "a"} -> i64
-    %11 = toy.print %5 : tensor<?x?xi32> {argName = "b"} -> i64
-    %12 = toy.print %6 : tensor<?x?xi32> {argName = "out"} -> i64
-    return
   }
 }
 
@@ -133,22 +85,6 @@ module {
     %7 = bufferization.materialize_in_destination %6 in %4 : (tensor<?x?xi32>, tensor<?x?xi32>) -> tensor<?x?xi32>
     return %7 : tensor<?x?xi32>
   }
-  func.func @main() {
-    %0 = toy.constant 4 : i32 -> i32
-    %1 = toy.constant 8 : i32 -> i32
-    %2 = arith.index_cast %0 : i32 to index
-    %3 = arith.index_cast %1 : i32 to index
-    %4 = toy.alloc %2, %3 : -> tensor<?x?xi32>
-    %5 = toy.alloc %2, %3 : -> tensor<?x?xi32>
-    %6 = toy.alloc %2, %3 : -> tensor<?x?xi32>
-    %7 = toy.random %4 : tensor<?x?xi32> -> tensor<?x?xi32>
-    %8 = toy.random %5 : tensor<?x?xi32> -> tensor<?x?xi32>
-    %9 = toy.call @add_two_vectors(%4, %5, %6, %0, %1) : (tensor<?x?xi32>, tensor<?x?xi32>, tensor<?x?xi32>, i32, i32) -> tensor<?x?xi32>
-    %10 = toy.print %4 : tensor<?x?xi32> {argName = "a"} -> i64
-    %11 = toy.print %5 : tensor<?x?xi32> {argName = "b"} -> i64
-    %12 = toy.print %6 : tensor<?x?xi32> {argName = "out"} -> i64
-    return
-  }
 }
 
 
@@ -169,22 +105,6 @@ module {
     } -> tensor<?x?xi32>
     %7 = bufferization.materialize_in_destination %6 in %4 : (tensor<?x?xi32>, tensor<?x?xi32>) -> tensor<?x?xi32>
     return %7 : tensor<?x?xi32>
-  }
-  func.func @main() {
-    %0 = toy.constant 4 : i32 -> i32
-    %1 = toy.constant 8 : i32 -> i32
-    %2 = arith.index_cast %0 : i32 to index
-    %3 = arith.index_cast %1 : i32 to index
-    %4 = toy.alloc %2, %3 : -> tensor<?x?xi32>
-    %5 = toy.alloc %2, %3 : -> tensor<?x?xi32>
-    %6 = toy.alloc %2, %3 : -> tensor<?x?xi32>
-    %7 = toy.random %4 : tensor<?x?xi32> -> tensor<?x?xi32>
-    %8 = toy.random %5 : tensor<?x?xi32> -> tensor<?x?xi32>
-    %9 = toy.call @add_two_vectors(%4, %5, %6, %0, %1) : (tensor<?x?xi32>, tensor<?x?xi32>, tensor<?x?xi32>, i32, i32) -> tensor<?x?xi32>
-    %10 = toy.print %4 : tensor<?x?xi32> {argName = "a"} -> i64
-    %11 = toy.print %5 : tensor<?x?xi32> {argName = "b"} -> i64
-    %12 = toy.print %6 : tensor<?x?xi32> {argName = "out"} -> i64
-    return
   }
 }
 
@@ -207,22 +127,6 @@ module {
     %7 = bufferization.materialize_in_destination %6 in %4 : (tensor<?x?xi32>, tensor<?x?xi32>) -> tensor<?x?xi32>
     return %7 : tensor<?x?xi32>
   }
-  func.func @main() {
-    %0 = toy.constant 4 : i32 -> i32
-    %1 = toy.constant 8 : i32 -> i32
-    %2 = arith.index_cast %0 : i32 to index
-    %3 = arith.index_cast %1 : i32 to index
-    %4 = toy.alloc %2, %3 : -> tensor<?x?xi32>
-    %5 = toy.alloc %2, %3 : -> tensor<?x?xi32>
-    %6 = toy.alloc %2, %3 : -> tensor<?x?xi32>
-    %7 = toy.random %4 : tensor<?x?xi32> -> tensor<?x?xi32>
-    %8 = toy.random %5 : tensor<?x?xi32> -> tensor<?x?xi32>
-    %9 = toy.call @add_two_vectors(%4, %5, %6, %0, %1) : (tensor<?x?xi32>, tensor<?x?xi32>, tensor<?x?xi32>, i32, i32) -> tensor<?x?xi32>
-    %10 = toy.print %4 : tensor<?x?xi32> {argName = "a"} -> i64
-    %11 = toy.print %5 : tensor<?x?xi32> {argName = "b"} -> i64
-    %12 = toy.print %6 : tensor<?x?xi32> {argName = "out"} -> i64
-    return
-  }
 }
 
 
@@ -243,22 +147,6 @@ module {
     } -> tensor<?x?xi32>
     return %6 : tensor<?x?xi32>
   }
-  func.func @main() {
-    %0 = toy.constant 4 : i32 -> i32
-    %1 = toy.constant 8 : i32 -> i32
-    %2 = arith.index_cast %0 : i32 to index
-    %3 = arith.index_cast %1 : i32 to index
-    %4 = toy.alloc %2, %3 : -> tensor<?x?xi32>
-    %5 = toy.alloc %2, %3 : -> tensor<?x?xi32>
-    %6 = toy.alloc %2, %3 : -> tensor<?x?xi32>
-    %7 = toy.random %4 : tensor<?x?xi32> -> tensor<?x?xi32>
-    %8 = toy.random %5 : tensor<?x?xi32> -> tensor<?x?xi32>
-    %9 = toy.call @add_two_vectors(%4, %5, %6, %0, %1) : (tensor<?x?xi32>, tensor<?x?xi32>, tensor<?x?xi32>, i32, i32) -> tensor<?x?xi32>
-    %10 = toy.print %4 : tensor<?x?xi32> {argName = "a"} -> i64
-    %11 = toy.print %5 : tensor<?x?xi32> {argName = "b"} -> i64
-    %12 = toy.print %6 : tensor<?x?xi32> {argName = "out"} -> i64
-    return
-  }
 }
 
 
@@ -277,22 +165,6 @@ module {
       linalg.yield %6 : i32
     } -> tensor<?x?xi32>
     return %5 : tensor<?x?xi32>
-  }
-  func.func @main() {
-    %0 = toy.constant 4 : i32 -> i32
-    %1 = toy.constant 8 : i32 -> i32
-    %2 = arith.index_cast %0 : i32 to index
-    %3 = arith.index_cast %1 : i32 to index
-    %4 = toy.alloc %2, %3 : -> tensor<?x?xi32>
-    %5 = toy.alloc %2, %3 : -> tensor<?x?xi32>
-    %6 = toy.alloc %2, %3 : -> tensor<?x?xi32>
-    %7 = toy.random %4 : tensor<?x?xi32> -> tensor<?x?xi32>
-    %8 = toy.random %5 : tensor<?x?xi32> -> tensor<?x?xi32>
-    %9 = toy.call @add_two_vectors(%4, %5, %6, %0, %1) : (tensor<?x?xi32>, tensor<?x?xi32>, tensor<?x?xi32>, i32, i32) -> tensor<?x?xi32>
-    %10 = toy.print %4 : tensor<?x?xi32> {argName = "a"} -> i64
-    %11 = toy.print %5 : tensor<?x?xi32> {argName = "b"} -> i64
-    %12 = toy.print %6 : tensor<?x?xi32> {argName = "out"} -> i64
-    return
   }
 }
 
@@ -318,22 +190,6 @@ module {
     %9 = builtin.unrealized_conversion_cast %8 : tensor<?x?xi32> to memref<?x?xi32>
     return %9 : memref<?x?xi32>
   }
-  func.func @main() {
-    %0 = toy.constant 4 : i32 -> i32
-    %1 = toy.constant 8 : i32 -> i32
-    %2 = arith.index_cast %0 : i32 to index
-    %3 = arith.index_cast %1 : i32 to index
-    %4 = toy.alloc %2, %3 : -> memref<?x?xi32>
-    %5 = toy.alloc %2, %3 : -> memref<?x?xi32>
-    %6 = toy.alloc %2, %3 : -> memref<?x?xi32>
-    %7 = toy.random %4 : memref<?x?xi32> -> memref<?x?xi32>
-    %8 = toy.random %5 : memref<?x?xi32> -> memref<?x?xi32>
-    %9 = toy.call @add_two_vectors(%4, %5, %6, %0, %1) : (memref<?x?xi32>, memref<?x?xi32>, memref<?x?xi32>, i32, i32) -> memref<?x?xi32>
-    %10 = toy.print %4 : memref<?x?xi32> {argName = "a"} -> i64
-    %11 = toy.print %5 : memref<?x?xi32> {argName = "b"} -> i64
-    %12 = toy.print %6 : memref<?x?xi32> {argName = "out"} -> i64
-    return
-  }
 }
 
 
@@ -352,22 +208,6 @@ module {
       linalg.yield %5 : i32
     }
     return %4 : memref<?x?xi32>
-  }
-  func.func @main() {
-    %0 = toy.constant 4 : i32 -> i32
-    %1 = toy.constant 8 : i32 -> i32
-    %2 = arith.index_cast %0 : i32 to index
-    %3 = arith.index_cast %1 : i32 to index
-    %4 = toy.alloc %2, %3 : -> memref<?x?xi32>
-    %5 = toy.alloc %2, %3 : -> memref<?x?xi32>
-    %6 = toy.alloc %2, %3 : -> memref<?x?xi32>
-    %7 = toy.random %4 : memref<?x?xi32> -> memref<?x?xi32>
-    %8 = toy.random %5 : memref<?x?xi32> -> memref<?x?xi32>
-    %9 = toy.call @add_two_vectors(%4, %5, %6, %0, %1) : (memref<?x?xi32>, memref<?x?xi32>, memref<?x?xi32>, i32, i32) -> memref<?x?xi32>
-    %10 = toy.print %4 : memref<?x?xi32> {argName = "a"} -> i64
-    %11 = toy.print %5 : memref<?x?xi32> {argName = "b"} -> i64
-    %12 = toy.print %6 : memref<?x?xi32> {argName = "out"} -> i64
-    return
   }
 }
 
@@ -393,22 +233,6 @@ module {
     }
     return %4 : memref<?x?xi32>
   }
-  func.func @main() {
-    %0 = toy.constant 4 : i32 -> i32
-    %1 = toy.constant 8 : i32 -> i32
-    %2 = arith.index_cast %0 : i32 to index
-    %3 = arith.index_cast %1 : i32 to index
-    %4 = toy.alloc %2, %3 : -> memref<?x?xi32>
-    %5 = toy.alloc %2, %3 : -> memref<?x?xi32>
-    %6 = toy.alloc %2, %3 : -> memref<?x?xi32>
-    %7 = toy.random %4 : memref<?x?xi32> -> memref<?x?xi32>
-    %8 = toy.random %5 : memref<?x?xi32> -> memref<?x?xi32>
-    %9 = toy.call @add_two_vectors(%4, %5, %6, %0, %1) : (memref<?x?xi32>, memref<?x?xi32>, memref<?x?xi32>, i32, i32) -> memref<?x?xi32>
-    %10 = toy.print %4 : memref<?x?xi32> {argName = "a"} -> i64
-    %11 = toy.print %5 : memref<?x?xi32> {argName = "b"} -> i64
-    %12 = toy.print %6 : memref<?x?xi32> {argName = "out"} -> i64
-    return
-  }
 }
 
 
@@ -430,22 +254,6 @@ module {
       scf.reduce 
     }
     return %4 : memref<?x?xi32>
-  }
-  func.func @main() {
-    %0 = toy.constant 4 : i32 -> i32
-    %1 = toy.constant 8 : i32 -> i32
-    %2 = arith.index_cast %0 : i32 to index
-    %3 = arith.index_cast %1 : i32 to index
-    %4 = toy.alloc %2, %3 : -> memref<?x?xi32>
-    %5 = toy.alloc %2, %3 : -> memref<?x?xi32>
-    %6 = toy.alloc %2, %3 : -> memref<?x?xi32>
-    %7 = toy.random %4 : memref<?x?xi32> -> memref<?x?xi32>
-    %8 = toy.random %5 : memref<?x?xi32> -> memref<?x?xi32>
-    %9 = toy.call @add_two_vectors(%4, %5, %6, %0, %1) : (memref<?x?xi32>, memref<?x?xi32>, memref<?x?xi32>, i32, i32) -> memref<?x?xi32>
-    %10 = toy.print %4 : memref<?x?xi32> {argName = "a"} -> i64
-    %11 = toy.print %5 : memref<?x?xi32> {argName = "b"} -> i64
-    %12 = toy.print %6 : memref<?x?xi32> {argName = "out"} -> i64
-    return
   }
 }
 

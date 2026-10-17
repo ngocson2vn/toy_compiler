@@ -168,9 +168,18 @@ private:
     for (const auto& arg : protoArgs) {
       const auto& argName = arg->getName();
       const auto& argType = arg->getType();
+      auto argLoc = loc(arg->loc());
       if (argType.isTensor() && argType.hasDynamicDim()) {
         const auto& argVal = symbolTable.lookup(argName);
-        assert(!!argVal && "The arg was not registered to symbolTable");
+        if (!argVal) {
+          emitError(
+            argLoc,
+            std::string("The function arg ")
+              .append(argName)
+              .append(" is not found!")
+          );
+          std::exit(1);
+        }
 
         SmallVector<mlir::Value> dims;
         for (const auto& dim : argType.shape) {
@@ -190,10 +199,19 @@ private:
               dimVal = cachedDimVal;
             } else {
               dimVal = symbolTable.lookup(dim.getId());
-              assert(!!dimVal && "The id was not registered to symbolTable");
+              if (!dimVal) {
+                emitError(
+                  argLoc,
+                  std::string("The identifier ")
+                    .append(dim.getId())
+                    .append(" is not found!")
+                );
+                std::exit(1);
+              }
+
               if (!mlir::isa<mlir::IndexType>(dimVal.getType())) {
                 dimVal = builder.create<arith::IndexCastOp>(
-                                        dimVal.getLoc(), builder.getIndexType(), dimVal);
+                                        argLoc, builder.getIndexType(), dimVal);
                 cachedIndexVals.insert(dim.getId(), dimVal);
               }
             }
@@ -203,7 +221,7 @@ private:
         }
 
         mlir::Value newArgVal = builder.create<mlir::toy::TieDimsOp>(
-                                    argVal.getLoc(), argVal.getType(), argVal, dims);
+                                    argLoc, argVal.getType(), argVal, dims);
         symbolTable.insert(argName, newArgVal);
       }
     }
@@ -353,16 +371,17 @@ private:
     if (auto variable = symbolTable.lookup(expr.getName()))
       return variable;
 
-    emitError(loc(expr.loc()), "error: unknown variable '")
-        << expr.getName() << "'";
+    emitError(loc(expr.loc()), "unknown variable '") << expr.getName() << "'";
+    std::exit(1);
+
     return nullptr;
   }
 
   mlir::Value mlirGen(AssignExprAST &expr) {
     mlir::Value srcVal = mlirGen(*expr.getSrc());
     if (!srcVal) {
-      emitError(loc(expr.loc()), "error: unknown source value");
-      return nullptr;
+      emitError(loc(expr.loc()), "assign op has unknown source value!");
+      std::exit(1);
     }
 
     auto& dst = *cast<VariableExprAST>(expr.getDst());
@@ -377,8 +396,9 @@ private:
       return storeVal;
     }
 
-    emitError(loc(expr.loc()), "error: unknown variable '")
-        << dst.getName() << "'";
+    emitError(loc(expr.loc()), "unknown variable '") << dst.getName() << "'";
+    std::exit(1);
+
     return nullptr;
   }
 
@@ -425,7 +445,16 @@ private:
 
     auto& varExpr = cast<VariableExprAST>(arg0);
     auto val = symbolTable.lookup(varExpr.getName());
-    assert(!!val && "The variable is not found!");
+    if (!val) {
+      emitError(
+        loc(varExpr.loc()),
+        std::string("The variable ")
+          .append(varExpr.getName())
+          .append(" is not found!")
+      );
+      std::exit(1);
+    }
+
     auto newVal = builder.create<mlir::toy::RandomOp>(
                       loc(call.loc()), mlir::TypeRange{val.getType()}, val);
 
@@ -477,10 +506,11 @@ private:
   /// Future expressions will be able to reference this variable through symbol
   /// table lookup.
   mlir::Value mlirGen(VarDeclExprAST &vardecl) {
+    auto varLoc = loc(vardecl.loc());
     const auto& type = vardecl.getType();
     auto *init = vardecl.getInitVal();
     if (!init && !type.isTensor()) {
-      emitError(loc(vardecl.loc()), 
+      emitError(varLoc, 
                 "The variable is invalid! "
                 "Either an initializer or a tensor type is required.");
       return nullptr;
@@ -517,7 +547,7 @@ private:
           dimVal = cachedDimVal;
         } else {
           dimVal = builder.create<arith::ConstantIndexOp>(
-                                    loc(vardecl.loc()), dim.getValue());
+                                    varLoc, dim.getValue());
           cachedIndexVals.insert(nameAttr.getValue(), dimVal);
         }
       } else {
@@ -525,30 +555,31 @@ private:
           dimVal = cachedDimVal;
         } else {
           dimVal = symbolTable.lookup(dim.getId());
-          assert(!!dimVal && "The id was not registered to symbolTable");
+          if (!dimVal) {
+            emitError(
+              varLoc,
+              std::string("The identifier ")
+                .append(dim.getId())
+                .append(" is not found!")
+            );
+            std::exit(1);
+          }
+
           if (!mlir::isa<mlir::IndexType>(dimVal.getType())) {
             dimVal = builder.create<arith::IndexCastOp>(
-                                    dimVal.getLoc(), builder.getIndexType(), dimVal);
+                                    varLoc, builder.getIndexType(), dimVal);
             cachedIndexVals.insert(dim.getId(), dimVal);
           }
         }
-
-        // dynamicSizes.push_back(dimVal);
       }
 
       dims.push_back(dimVal);
     }
 
-    mlir::Value value;
-    auto varLoc = loc(vardecl.loc());
-    value = builder.create<mlir::toy::AllocOp>(
+    mlir::Value value = builder.create<mlir::toy::AllocOp>(
                             varLoc,
                             getRankedTensorType(type),
                             dims);
-
-    // // Tie dimensions to the tensor
-    // value = builder.create<mlir::toy::TieDimsOp>(
-    //                         varLoc, value.getType(), value, dims);
 
     // Register the value in the symbol table.
     if (failed(declare(vardecl.getName(), value))) {

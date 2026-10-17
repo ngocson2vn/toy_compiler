@@ -117,6 +117,7 @@
     "semaphore": "cpp",
     "WORKSPACE": "python",
     "BUILD": "python",
+    "*.toy": "python",
     "*.bzl": "python",
     "*.bazel": "python",
     "compare": "cpp",
@@ -144,7 +145,8 @@
     "__target_macros": "cpp",
     "__functional_base": "cpp"
   },
+  "python.analysis.ignore": ["*.toy"],
+  "python.analysis.typeCheckingMode": "off",
   "mlir.tablegen_server_path": "/home/son.nguyen/workspace/toy_compiler/llvm-project/build/bin/tblgen-lsp-server",
   "lldb-dap.executable-path": "/usr/lib/llvm-17/bin/lldb-vscode",
-  "C_Cpp.errorSquiggles": "disabled"
 }
