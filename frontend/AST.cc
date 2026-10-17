@@ -42,16 +42,21 @@ private:
   void dump(NumberExprAST *num);
   void dump(LiteralExprAST *node);
   void dump(VariableExprAST *node);
-  void dump(ReturnExprAST *node);
   void dump(AssignExprAST *node);
-  void dump(AddExprAST *node);
-  void dump(MaxExprAST *node);
-  void dump(RandomExprAST *node);
   void dump(BinaryExprAST *node);
-  void dump(CallExprAST *node);
-  void dump(PrintExprAST *node);
   void dump(PrototypeAST *node);
   void dump(FunctionAST *node);
+  void dump(ReturnExprAST *node);
+
+  // Host ops
+  void dump(RandomExprAST *node);
+  void dump(CallExprAST *node);
+  void dump(PrintExprAST *node);
+
+  // Device ops
+  void dump(AddExprAST *node);
+  void dump(MaxExprAST *node);
+  void dump(DotExprAST *node);
 
   // Actually print spaces matching the current indentation level
   void indent() {

@@ -147,23 +147,36 @@ struct LowerMemRefToLLVMLoadOpPattern : public OpConversionPattern<memref::LoadO
   LogicalResult matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor, ConversionPatternRewriter &rewriter) const override {
     auto loc = loadOp.getLoc();
     auto memref = loadOp.getMemRef();
+    auto memrefType = cast<MemRefType>(memref.getType());
     auto tieOp = memref.getDefiningOp<mlir::toy::TieDimsOp>();
-    if (!tieOp) {
-      llvm::errs() << "ERROR Invalid argument at " << loc << "\n";
-      return failure();
+    if (!tieOp && !memrefType.hasStaticShape()) {
+      emitError(loc, "invalid argument: ") << memref;
+      std::exit(1);
     }
 
-    auto rdims = llvm::reverse(tieOp.getDims());
+    SmallVector<Value> dims;
+    if (memrefType.hasStaticShape()) {
+      for (const auto& dim : memrefType.getShape()) {
+        Value dimVal = rewriter.create<LLVM::ConstantOp>(loc, rewriter.getI64Type(), dim);
+        dims.push_back(dimVal);
+      }
+    } else {
+      dims = tieOp.getDims();
+    }
+
+    auto rdims = llvm::reverse(dims);
     //  dims = [d0, d1, d2] -> strides = [d1 * d2, d2, 1]
     // rdims = [d2, d1, d0] -> strides = [d1 * d2, d2, 1]
 
     SmallVector<Value> strides;
-    auto c1 = rewriter.create<LLVM::ConstantOp>(loc, rewriter.getI64Type(), 1);
-
-    Value s = c1;
+    Value s = rewriter.create<LLVM::ConstantOp>(loc, rewriter.getI64Type(), 1);
     strides.insert(strides.begin(), s);
     for (auto it = rdims.begin(); it != (rdims.end() - 1); it++) {
-      Value rhs = rewriter.create<arith::IndexCastOp>(loc, rewriter.getI64Type(), *it);
+      Value rhs = *it;
+      if (isa<IndexType>(rhs.getType())) {
+        rhs = rewriter.create<arith::IndexCastOp>(loc, rewriter.getI64Type(), rhs);
+      }
+
       s = rewriter.create<LLVM::MulOp>(loc, s, rhs);
       strides.insert(strides.begin(), s);
     }
@@ -195,23 +208,36 @@ struct LowerMemRefToLLVMStoreOpPattern : public OpConversionPattern<memref::Stor
   LogicalResult matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor, ConversionPatternRewriter &rewriter) const override {
     auto loc = storeOp.getLoc();
     auto memref = storeOp.getMemRef();
+    auto memrefType = cast<MemRefType>(memref.getType());
     auto tieOp = memref.getDefiningOp<mlir::toy::TieDimsOp>();
-    if (!tieOp) {
-      llvm::errs() << "ERROR Invalid argument at " << loc << "\n";
-      return failure();
+    if (!tieOp && !memrefType.hasStaticShape()) {
+      emitError(loc, "invalid argument: ") << memref;
+      std::exit(1);
     }
 
-    auto rdims = llvm::reverse(tieOp.getDims());
+    SmallVector<Value> dims;
+    if (memrefType.hasStaticShape()) {
+      for (const auto& dim : memrefType.getShape()) {
+        Value dimVal = rewriter.create<LLVM::ConstantOp>(loc, rewriter.getI64Type(), dim);
+        dims.push_back(dimVal);
+      }
+    } else {
+      dims = tieOp.getDims();
+    }
+
+    auto rdims = llvm::reverse(dims);
     //  dims = [d0, d1, d2] -> strides = [d1 * d2, d2, 1]
     // rdims = [d2, d1, d0] -> strides = [d1 * d2, d2, 1]
 
     SmallVector<Value> strides;
-    auto c1 = rewriter.create<LLVM::ConstantOp>(loc, rewriter.getI64Type(), 1);
-
-    Value s = c1;
+    Value s = rewriter.create<LLVM::ConstantOp>(loc, rewriter.getI64Type(), 1);
     strides.insert(strides.begin(), s);
     for (auto it = rdims.begin(); it != (rdims.end() - 1); it++) {
-      Value rhs = rewriter.create<arith::IndexCastOp>(loc, rewriter.getI64Type(), *it);
+      Value rhs = *it;
+      if (isa<IndexType>(rhs.getType())) {
+        rhs = rewriter.create<arith::IndexCastOp>(loc, rewriter.getI64Type(), rhs);
+      }
+
       s = rewriter.create<LLVM::MulOp>(loc, s, rhs);
       strides.insert(strides.begin(), s);
     }

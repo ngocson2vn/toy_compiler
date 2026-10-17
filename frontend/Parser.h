@@ -64,6 +64,14 @@ public:
       return std::make_unique<MaxExprAST>(std::move(loc), std::move(args));
     };
 
+    opFunctions["dot"] = [this](Location& loc, std::vector<std::unique_ptr<ExprAST>>& args) 
+                              -> std::unique_ptr<ExprAST> {
+      if (args.size() != 2)
+        return parseError<ExprAST>("<2 args>", "as arguments to dot()");
+
+      return std::make_unique<DotExprAST>(std::move(loc), std::move(args));
+    };
+
     opFunctions["random"] = [this](Location& loc, std::vector<std::unique_ptr<ExprAST>>& args) 
                               -> std::unique_ptr<ExprAST> {
       if (args.size() != 1)

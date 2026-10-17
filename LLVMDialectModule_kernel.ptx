@@ -42,7 +42,7 @@
 	add.s64 	%rd3, %rd10, %rd15;
 	ld.global.b32 	%r3, [%rd1];
 	ld.global.b32 	%r4, [%rd2];
-	add.rn.f32 	%r5, %r3, %r4;
+	add.s32 	%r5, %r4, %r3;
 	st.global.b32 	[%rd3], %r5;
 $L__BB0_2:
 	ret;

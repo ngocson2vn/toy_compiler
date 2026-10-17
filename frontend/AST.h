@@ -142,11 +142,16 @@ public:
     Expr_Var,
     Expr_AssignOp,
     Expr_BinOp,
-    Expr_Add,
-    Expr_Max,
+
+    // Host ops
     Expr_Random,
     Expr_Call,
-    Expr_Print
+    Expr_Print,
+
+    // Device ops
+    Expr_Add,
+    Expr_Max,
+    Expr_Dot
   };
 
   ExprAST(ExprASTKind kind, Location location)
@@ -296,7 +301,7 @@ public:
   static bool classof(const ExprAST *c) { return c->getKind() == Expr_BinOp; }
 };
 
-/// Expression class for function calls.
+/// Expression class for function call.
 class CallExprAST : public ExprAST {
   std::string callee;
   std::vector<std::unique_ptr<ExprAST>> args;
@@ -314,7 +319,7 @@ public:
   static bool classof(const ExprAST *c) { return c->getKind() == Expr_Call; }
 };
 
-/// Expression class for builtin print calls.
+/// Expression class for builtin print call.
 class PrintExprAST : public ExprAST {
   std::unique_ptr<ExprAST> arg;
 
@@ -328,7 +333,7 @@ public:
   static bool classof(const ExprAST *c) { return c->getKind() == Expr_Print; }
 };
 
-/// Expression class for builtin add calls.
+/// Expression class for builtin add call.
 class AddExprAST : public ExprAST {
   std::vector<std::unique_ptr<ExprAST>> args;
 
@@ -342,7 +347,7 @@ public:
   static bool classof(const ExprAST *c) { return c->getKind() == Expr_Add; }
 };
 
-/// Expression class for builtin max calls.
+/// Expression class for builtin max call.
 class MaxExprAST : public ExprAST {
   std::vector<std::unique_ptr<ExprAST>> args;
 
@@ -356,7 +361,21 @@ public:
   static bool classof(const ExprAST *c) { return c->getKind() == Expr_Max; }
 };
 
-/// Expression class for builtin random calls.
+/// Expression class for builtin dot call.
+class DotExprAST : public ExprAST {
+  std::vector<std::unique_ptr<ExprAST>> args;
+
+public:
+  DotExprAST(Location loc, std::vector<std::unique_ptr<ExprAST>> args)
+      : ExprAST(Expr_Dot, std::move(loc)), args(std::move(args)) {}
+
+  std::vector<std::unique_ptr<ExprAST>>& getArgs() { return args; }
+
+  /// LLVM style RTTI
+  static bool classof(const ExprAST *c) { return c->getKind() == Expr_Dot; }
+};
+
+/// Expression class for builtin random call.
 class RandomExprAST : public ExprAST {
   std::vector<std::unique_ptr<ExprAST>> args;
 

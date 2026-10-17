@@ -267,6 +267,88 @@ struct ToyMaxOpConverter : public OpConversionPattern<toy::MaxOp> {
   }
 };
 
+struct ToyDotOpConverter : public OpConversionPattern<toy::DotOp> {
+  using OpConversionPattern<toy::DotOp>::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(
+      toy::DotOp op, OpAdaptor adaptor,
+      ConversionPatternRewriter &rewriter) const override {
+    auto a = op.getLhs();
+    auto b = op.getRhs();
+
+    auto resultType = cast<RankedTensorType>(op.getResult().getType());
+    auto elemType = resultType.getElementType();
+
+    // Create output tensor
+    SmallVector<Value> dynamicSizes;
+    auto resultShape = resultType.getShape();
+    if (resultShape[0] == ShapedType::kDynamic) {
+      Value c0 = rewriter.create<arith::ConstantIndexOp>(op.getLoc(), 0);
+      Value dim = rewriter.create<tensor::DimOp>(op.getLoc(), a, c0);
+      dynamicSizes.push_back(dim);
+    }
+
+    if (resultShape[1] == ShapedType::kDynamic) {
+      Value c1 = rewriter.create<arith::ConstantIndexOp>(op.getLoc(), 1);
+      Value dim = rewriter.create<tensor::DimOp>(op.getLoc(), b, c1);
+      dynamicSizes.push_back(dim);
+    }
+
+    Value outTensor = rewriter.create<tensor::EmptyOp>(op.getLoc(), resultType, dynamicSizes);
+
+    // Indexing maps: identity for x and output, empty or identity for y.
+    // SmallVector<AffineExpr> exprs;
+    // for (int64_t i = 0; i < rank; ++i) {
+    //   exprs.push_back(rewriter.getAffineDimExpr(i));
+    // }
+    // auto xIndexMap = AffineMap::get(rank, 0, exprs, rewriter.getContext());
+
+    AffineExpr m, n, k;
+    auto ctx = getContext();
+    bindDims(ctx, m, n, k);          // m = d0, n = d1, k = d2
+
+    AffineMap aMap = AffineMap::get(/*dimCount=*/3, /*symbolCount=*/0, {m, k}, ctx);
+    AffineMap bMap = AffineMap::get(/*dimCount=*/3, /*symbolCount=*/0, {k, n}, ctx);
+    AffineMap cMap = AffineMap::get(/*dimCount=*/3, /*symbolCount=*/0, {m, n}, ctx);
+    SmallVector<AffineMap> indexingMaps = {aMap, bMap, cMap};
+
+    // Set iterator types: all parallel for element-wise operation.
+    SmallVector<utils::IteratorType> iteratorTypes = {
+      utils::IteratorType::parallel,
+      utils::IteratorType::parallel,
+      utils::IteratorType::reduction
+    };
+
+    // Create linalg.generic operation with memref semantics.
+    auto linalgOp = rewriter.create<linalg::GenericOp>(
+      op.getLoc(),
+      /*resultTypes=*/TypeRange{resultType},
+      /*inputs=*/ValueRange{a, b},
+      /*outputs=*/ValueRange{outTensor},
+      /*indexingMaps=*/indexingMaps,
+      /*iteratorTypes=*/iteratorTypes,
+      [&](OpBuilder &nestedBuilder, Location loc, ValueRange args) {
+        Value acc;
+        if (elemType.isF32() || elemType.isF16()) {
+          Value mul = nestedBuilder.create<arith::MulFOp>(loc, args[0], args[1]);
+          acc = nestedBuilder.create<arith::AddFOp>(loc, args[2], mul);
+        } else if (elemType.isInteger()) {
+          Value mul = nestedBuilder.create<arith::MulIOp>(loc, args[0], args[1]);
+          acc = nestedBuilder.create<arith::AddIOp>(loc, args[2], mul);
+        } else {
+          llvm_unreachable("Unsupported type");
+        }
+        // nestedBuilder.create<linalg::YieldOp>(loc);
+        nestedBuilder.create<linalg::YieldOp>(loc, acc);
+      }
+    );
+
+    rewriter.replaceOp(op, linalgOp);
+
+    return success();
+  }
+};
+
 struct ToyStoreOpConverter : public OpConversionPattern<toy::StoreOp> {
   using OpConversionPattern<toy::StoreOp>::OpConversionPattern;
 
@@ -350,6 +432,7 @@ struct ConvertToyToLinalgPass : public toy::impl::ConvertToyToLinalgPassBase<Con
     target.addIllegalOp<
       toy::AddOp,
       toy::MaxOp,
+      toy::DotOp,
       toy::StoreOp
     >();
 
@@ -358,6 +441,7 @@ struct ConvertToyToLinalgPass : public toy::impl::ConvertToyToLinalgPassBase<Con
     patterns.add<
       ToyAddOpConverter,
       ToyMaxOpConverter,
+      ToyDotOpConverter,
       ToyStoreOpConverter
     >(&getContext());
 

@@ -7,6 +7,7 @@ include "mlir/IR/CommonAttrConstraints.td"
 
 include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/Interfaces/InferTypeOpInterface.td"
 
 def Toy_Dialect : Dialect {
   let name = "toy";
@@ -65,6 +66,42 @@ def Toy_FuncOp : Op<Toy_Dialect, "func", [
 
   let hasCustomAssemblyFormat = 1;
 }
+
+
+def Toy_ReturnOp : Op<Toy_Dialect, "return", [HasParent<"FuncOp">, Terminator]> {
+  let summary = "return operation";
+  let description = [{
+    The "return" operation represents a return operation within a function.
+    The operation takes an optional tensor operand and produces no results.
+    The operand type must match the signature of the function that contains
+    the operation. For example:
+
+    ```mlir
+      func.func @foo() -> tensor<2xf32> {
+        ...
+        toy.return %0 : tensor<2xf32>
+      }
+    ```
+  }];
+
+  // The return operation takes an optional input operand to return. This
+  // value must match the return type of the enclosing function.
+  let arguments = (ins Variadic<AnyType>:$input);
+
+  // The return operation only emits the input in the format if it is present.
+  let assemblyFormat = "($input^ `:` type($input))? attr-dict ";
+
+  // Allow building a ReturnOp with no return operand.
+  let builders = [
+    OpBuilder<(ins), [{ build($_builder, $_state, {}); }]>
+  ];
+
+  // Provide extra utility definitions on the c++ operation class definition.
+  let extraClassDeclaration = [{
+    bool hasOperand() { return getNumOperands() != 0; }
+  }];
+}
+
 
 def Toy_CallOp : Op<Toy_Dialect, "call"> {
   let summary = "Call operation for the toy dialect";
@@ -159,12 +196,12 @@ def Toy_AddOp : Op<Toy_Dialect, "add"> {
   // ];
 }
 
-def Toy_MaxOp : Op<Toy_Dialect, "max"> {
+def Toy_MaxOp : Op<Toy_Dialect, "max", [AllElementTypesMatch<["lhs", "rhs"]>]> {
   let summary = "Maximum operation for the toy dialect";
   let description = [{
     This operation computes the maximum of two tensors element-wise.
   }];
-  let arguments = (ins AnyTypeOf<[I32Tensor, F32Tensor]>:$lhs, AnyTypeOf<[F32Tensor, F32]>:$rhs);
+  let arguments = (ins AnyTypeOf<[I32Tensor, F32Tensor]>:$lhs, AnyTypeOf<[I32Tensor, F32Tensor, I32, F32]>:$rhs);
   let results = (outs AnyTypeOf<[I32Tensor, F32Tensor]>:$result);
 
   let assemblyFormat = "$lhs `,` $rhs `:` type($lhs) `,` type($rhs) attr-dict `->` type($result)";
@@ -222,36 +259,14 @@ def Toy_StoreOp : Op<Toy_Dialect, "store"> {
   let assemblyFormat = "$src `,` $dst `:` type($src) `,` type($dst) attr-dict `->` type($result)";
 }
 
-def Toy_ReturnOp : Op<Toy_Dialect, "return", [HasParent<"FuncOp">, Terminator]> {
-  let summary = "return operation";
+
+def Toy_DotOp : Op<Toy_Dialect, "dot", [Pure, AllElementTypesMatch<["lhs", "rhs"]>, DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
+  let summary = "Dot operation for the toy dialect";
   let description = [{
-    The "return" operation represents a return operation within a function.
-    The operation takes an optional tensor operand and produces no results.
-    The operand type must match the signature of the function that contains
-    the operation. For example:
-
-    ```mlir
-      func.func @foo() -> tensor<2xf32> {
-        ...
-        toy.return %0 : tensor<2xf32>
-      }
-    ```
+    This operation computes dot product of two tensors.
   }];
+  let arguments = (ins AnyTypeOf<[I32Tensor, F32Tensor]>:$lhs, AnyTypeOf<[I32Tensor, F32Tensor]>:$rhs);
+  let results = (outs AnyTypeOf<[I32Tensor, F32Tensor]>:$result);
 
-  // The return operation takes an optional input operand to return. This
-  // value must match the return type of the enclosing function.
-  let arguments = (ins Variadic<AnyType>:$input);
-
-  // The return operation only emits the input in the format if it is present.
-  let assemblyFormat = "($input^ `:` type($input))? attr-dict ";
-
-  // Allow building a ReturnOp with no return operand.
-  let builders = [
-    OpBuilder<(ins), [{ build($_builder, $_state, {}); }]>
-  ];
-
-  // Provide extra utility definitions on the c++ operation class definition.
-  let extraClassDeclaration = [{
-    bool hasOperand() { return getNumOperands() != 0; }
-  }];
+  let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($lhs) `,` type($rhs) `->` type($result)";
 }

@@ -160,6 +160,38 @@ void TieDimsOp::getCanonicalizationPatterns(RewritePatternSet& patterns, MLIRCon
   patterns.add<TensorDimOpPattern, MemRefDimOpPattern, EraseToyTieDimsOpPattern>(ctx);
 }
 
+LogicalResult DotOp::inferReturnTypes(
+    MLIRContext *ctx, std::optional<Location> loc, ValueRange operands,
+    DictionaryAttr attrs, OpaqueProperties props, RegionRange regions,
+    SmallVectorImpl<Type> &inferredReturnTypes) {
+  auto lhsTy = llvm::cast<TensorType>(operands[0].getType());
+  auto rhsTy = llvm::cast<TensorType>(operands[1].getType());
+  Type elemTy = lhsTy.getElementType();
+
+  // Unranked input: result shape unknown.
+  if (!lhsTy.hasRank() || !rhsTy.hasRank()) {
+    inferredReturnTypes.push_back(UnrankedTensorType::get(elemTy));
+    return success();
+  }
+
+  ArrayRef<int64_t> l = lhsTy.getShape(), r = rhsTy.getShape();
+  if (l.empty() || r.empty() || l.size() > 2 || r.size() > 2)
+    return emitOptionalError(loc, "dot expects rank-1 or rank-2 operands");
+
+  // Contracting dims: last dim of lhs, first dim of rhs.
+  int64_t lk = l.back(), rk = r.front();
+  if (!ShapedType::isDynamic(lk) && !ShapedType::isDynamic(rk) && lk != rk)
+    return emitOptionalError(loc, "contracting dimension mismatch: ",
+                             lk, " vs ", rk);
+
+  SmallVector<int64_t> shape;
+  if (l.size() == 2) shape.push_back(l[0]);  // M
+  if (r.size() == 2) shape.push_back(r[1]);  // N
+
+  inferredReturnTypes.push_back(RankedTensorType::get(shape, elemTy));
+  return success();
+}
+
 void registerBufferizableOpInterfaceExternalModels(DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, ToyDialect *dialect) {
     TieDimsOp::attachInterface<TieDimsBufferizableModel>(*ctx);

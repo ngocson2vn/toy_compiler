@@ -11,8 +11,8 @@ module {
     toy.return %6 : tensor<?x?xi32>
   }
   toy.func @main() {
-    %0 = toy.constant 16 : i32 -> i32
-    %1 = toy.constant 32 : i32 -> i32
+    %0 = toy.constant 4 : i32 -> i32
+    %1 = toy.constant 8 : i32 -> i32
     %2 = arith.index_cast %0 : i32 to index
     %3 = arith.index_cast %1 : i32 to index
     %4 = toy.alloc %2, %3 : -> tensor<?x?xi32>
@@ -21,9 +21,9 @@ module {
     %7 = toy.random %4 : tensor<?x?xi32> -> tensor<?x?xi32>
     %8 = toy.random %5 : tensor<?x?xi32> -> tensor<?x?xi32>
     %9 = toy.call @add_two_vectors(%4, %5, %6, %0, %1) : (tensor<?x?xi32>, tensor<?x?xi32>, tensor<?x?xi32>, i32, i32) -> tensor<?x?xi32>
-    %10 = toy.print %4 : tensor<?x?xi32> {argName = "t1"} -> i64
-    %11 = toy.print %5 : tensor<?x?xi32> {argName = "t2"} -> i64
-    %12 = toy.print %6 : tensor<?x?xi32> {argName = "t3"} -> i64
+    %10 = toy.print %4 : tensor<?x?xi32> {argName = "a"} -> i64
+    %11 = toy.print %5 : tensor<?x?xi32> {argName = "b"} -> i64
+    %12 = toy.print %6 : tensor<?x?xi32> {argName = "c"} -> i64
     toy.return
   }
 }

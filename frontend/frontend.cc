@@ -103,6 +103,7 @@ private:
   /// scope is destroyed and the mappings created in this scope are dropped.
   llvm::ScopedHashTable<StringRef, mlir::Value> symbolTable;
   llvm::ScopedHashTable<StringRef, mlir::Value> cachedIndexVals;
+  llvm::ScopedHashTable<StringRef, SmallVector<StringAttr>> tensorTable;
 
   std::unordered_map<std::string, mlir::toy::FuncOp> funcOps;
 
@@ -119,167 +120,6 @@ private:
       return mlir::failure();
     symbolTable.insert(var, value);
     return mlir::success();
-  }
-
-  /// Create the prototype for an MLIR function with as many arguments as the
-  /// provided Toy AST prototype.
-  mlir::toy::FuncOp mlirGen(PrototypeAST &proto) {
-    auto location = loc(proto.loc());
-
-    // This is a generic function, the return type will be inferred later.
-    // Arguments type are uniformly unranked tensors.
-    llvm::SmallVector<mlir::Type, 4> argTypes;
-    for (auto& arg : proto.getArgs()) {
-      argTypes.push_back(getType(arg->getType()));
-    }
-    auto funcType = builder.getFunctionType(argTypes, {});
-    return builder.create<mlir::toy::FuncOp>(location, proto.getName(), funcType);
-  }
-
-  /// Emit a new function and add it to the MLIR module.
-  mlir::toy::FuncOp mlirGen(FunctionAST &funcAST) {
-    // Create a scope in the symbol table to hold variable declarations.
-    ScopedHashTableScope<llvm::StringRef, mlir::Value> varScope(symbolTable);
-    ScopedHashTableScope<llvm::StringRef, mlir::Value> idxScope(cachedIndexVals);
-
-    // Create an MLIR function for the given prototype.
-    builder.setInsertionPointToEnd(theModule.getBody());
-    mlir::toy::FuncOp function = mlirGen(*funcAST.getProto());
-    if (!function)
-      return nullptr;
-
-    // Let's start the body of the function now!
-    mlir::Block& entryBlock = *function.addEntryBlock();
-
-    // Declare all the function arguments in the symbol table.
-    auto protoArgs = funcAST.getProto()->getArgs();
-    for (const auto nameValue : llvm::zip(protoArgs, entryBlock.getArguments())) {
-      auto argName = std::get<0>(nameValue)->getName();
-      if (failed(declare(argName, std::get<1>(nameValue))))
-        return nullptr;
-    }
-
-    // Set the insertion point in the builder to the beginning of the function
-    // body, it will be used throughout the codegen to create operations in this
-    // function.
-    builder.setInsertionPointToStart(&entryBlock);
-
-    // Tie tensors' shapes
-    for (const auto& arg : protoArgs) {
-      const auto& argName = arg->getName();
-      const auto& argType = arg->getType();
-      auto argLoc = loc(arg->loc());
-      if (argType.isTensor() && argType.hasDynamicDim()) {
-        const auto& argVal = symbolTable.lookup(argName);
-        if (!argVal) {
-          emitError(
-            argLoc,
-            std::string("The function arg ")
-              .append(argName)
-              .append(" is not found!")
-          );
-          std::exit(1);
-        }
-
-        SmallVector<mlir::Value> dims;
-        for (const auto& dim : argType.shape) {
-          mlir::Value dimVal;
-          if (dim.isStatic()) {
-            std::string name = "%c" + std::to_string(dim.getValue());
-            const auto& nameAttr = builder.getStringAttr(name.c_str());
-            if (auto cachedDimVal = cachedIndexVals.lookup(nameAttr.getValue())) {
-              dimVal = cachedDimVal;
-            } else {
-              dimVal = builder.create<arith::ConstantIndexOp>(
-                                        argVal.getLoc(), dim.getValue());
-              cachedIndexVals.insert(nameAttr.getValue(), dimVal);
-            }
-          } else {
-            if (auto cachedDimVal = cachedIndexVals.lookup(dim.getId())) {
-              dimVal = cachedDimVal;
-            } else {
-              dimVal = symbolTable.lookup(dim.getId());
-              if (!dimVal) {
-                emitError(
-                  argLoc,
-                  std::string("The identifier ")
-                    .append(dim.getId())
-                    .append(" is not found!")
-                );
-                std::exit(1);
-              }
-
-              if (!mlir::isa<mlir::IndexType>(dimVal.getType())) {
-                dimVal = builder.create<arith::IndexCastOp>(
-                                        argLoc, builder.getIndexType(), dimVal);
-                cachedIndexVals.insert(dim.getId(), dimVal);
-              }
-            }
-          }
-
-          dims.push_back(dimVal);
-        }
-
-        mlir::Value newArgVal = builder.create<mlir::toy::TieDimsOp>(
-                                    argLoc, argVal.getType(), argVal, dims);
-        symbolTable.insert(argName, newArgVal);
-      }
-    }
-
-
-    // Emit the body of the function.
-    if (mlir::failed(mlirGen(*funcAST.getBody()))) {
-      function.erase();
-      return nullptr;
-    }
-
-    // Implicitly return void if no return statement was emitted.
-    // FIXME: we may fix the parser instead to always return the last expression
-    // (this would possibly help the REPL case later)
-    mlir::toy::ReturnOp returnOp;
-    if (!entryBlock.empty())
-      returnOp = dyn_cast<mlir::toy::ReturnOp>(entryBlock.back());
-
-    if (!returnOp) {
-      mlir::Value funcRetVal = symbolTable.lookup(function.getSymName());
-      if (!!funcRetVal) {
-        returnOp = builder.create<mlir::toy::ReturnOp>(loc(funcAST.getProto()->loc()), funcRetVal);
-      } else {
-        returnOp = builder.create<mlir::toy::ReturnOp>(loc(funcAST.getProto()->loc()));
-      }
-    }
-
-    if (returnOp.getOperands().size() > 0) {
-      // Otherwise, if this return operation has an operand then add a result to
-      // the function.
-      function.setType(builder.getFunctionType(
-          function.getFunctionType().getInputs(), returnOp.getInput().getType()));
-    }
-
-    funcOps.insert({function.getSymName().str(), function});
-
-    return function;
-  }
-
-  /// Emit a add expression. It emits specific operations for builtin:
-  /// print(x).
-  mlir::Value mlirGen(PrintExprAST &call) {
-    auto arg = call.getArg();
-    StringRef argName = "";
-    if (auto varExpr = dyn_cast<VariableExprAST>(arg)) {
-      argName = varExpr->getName();
-    }
-
-    auto argVal = mlirGen(*arg);
-    if (!argVal)
-      return nullptr;
-
-    auto v = builder.create<mlir::toy::PrintOp>(loc(call.loc()), builder.getI64Type(), argVal);
-    if (!argName.empty()) {
-      v->setAttr("argName", builder.getStringAttr(argName));
-    }
-
-    return v;
   }
 
   // Emit a F32 number
@@ -345,25 +185,6 @@ private:
     }
   }
 
-  /// Emit a return operation. This will return failure if any generation fails.
-  mlir::LogicalResult mlirGen(ReturnExprAST &ret) {
-    auto location = loc(ret.loc());
-
-    // 'return' takes an optional expression, handle that case here.
-    if (!ret.getExpr().has_value()) {
-      return mlir::failure();
-    }
-
-    mlir::Value expr = mlirGen(*ret.getExpr().value());
-    if (!expr) {
-      return mlir::failure();
-    }
-
-    // Otherwise, create mlir::toy::ReturnOp
-    builder.create<mlir::toy::ReturnOp>(location, expr);
-    return mlir::success();
-  }
-
   /// This is a reference to a variable in an expression. The variable is
   /// expected to have been declared and so should have a value in the symbol
   /// table, otherwise emit an error and return nullptr.
@@ -402,35 +223,206 @@ private:
     return nullptr;
   }
 
-  /// Emit a add expression. It emits specific operations for builtin:
-  /// add(x, y, n) and print(x).
-  mlir::Value mlirGen(AddExprAST &call) {
-    SmallVector<mlir::Value> argVals;
-    for (auto& arg : call.getArgs()) {
-      auto val = mlirGen(*arg);
-      if (!val)
-        return nullptr;
 
-      argVals.push_back(val);
+  /// Create the prototype for an MLIR function with as many arguments as the
+  /// provided Toy AST prototype.
+  mlir::toy::FuncOp mlirGen(PrototypeAST &proto) {
+    auto location = loc(proto.loc());
+
+    // This is a generic function, the return type will be inferred later.
+    // Arguments type are uniformly unranked tensors.
+    llvm::SmallVector<mlir::Type, 4> argTypes;
+    for (auto& arg : proto.getArgs()) {
+      argTypes.push_back(getType(arg->getType()));
+    }
+    auto funcType = builder.getFunctionType(argTypes, {});
+    return builder.create<mlir::toy::FuncOp>(location, proto.getName(), funcType);
+  }
+
+
+  std::pair<SmallVector<mlir::Value>, SmallVector<StringAttr>> 
+  getDims(const VarType& type, const mlir::Location& loc) {
+    SmallVector<mlir::Value> dims;
+    SmallVector<StringAttr> dimAttrs;
+    for (const auto& dim : type.shape) {
+      mlir::Value dimVal;
+      if (dim.isStatic()) {
+        auto dimAttr = builder.getStringAttr(std::to_string(dim.getValue()));
+        dimAttrs.push_back(dimAttr);
+
+        const auto& nameAttr = builder.getStringAttr("%c" + dimAttr.str());
+        if (auto cachedDimVal = cachedIndexVals.lookup(nameAttr.getValue())) {
+          dimVal = cachedDimVal;
+        } else {
+          dimVal = builder.create<arith::ConstantIndexOp>(
+                                      loc, dim.getValue());
+          cachedIndexVals.insert(nameAttr.getValue(), dimVal);
+        }
+      } else {
+        auto dimAttr = builder.getStringAttr(dim.getId());
+        dimAttrs.push_back(dimAttr);
+
+        if (auto cachedDimVal = cachedIndexVals.lookup(dim.getId())) {
+          dimVal = cachedDimVal;
+        } else {
+          dimVal = symbolTable.lookup(dim.getId());
+          if (!dimVal) {
+            emitError(
+              loc,
+              std::string("The identifier ")
+                .append(dim.getId())
+                .append(" is not found!")
+            );
+            std::exit(1);
+          }
+
+          if (!mlir::isa<mlir::IndexType>(dimVal.getType())) {
+            dimVal = builder.create<arith::IndexCastOp>(
+                                    loc, builder.getIndexType(), dimVal);
+            cachedIndexVals.insert(dim.getId(), dimVal);
+          }
+        }
+      }
+
+      dims.push_back(dimVal);
     }
 
-    auto v = builder.create<mlir::toy::AddOp>(loc(call.loc()), mlir::TypeRange{argVals[0].getType()}, argVals);
-    return v;
+    return std::make_pair(dims, dimAttrs);
+  }
+
+
+  /// Emit a new function and add it to the MLIR module.
+  mlir::toy::FuncOp mlirGen(FunctionAST &funcAST) {
+    // Create a scope in the symbol table to hold variable declarations.
+    ScopedHashTableScope<llvm::StringRef, mlir::Value> varScope(symbolTable);
+    ScopedHashTableScope<llvm::StringRef, mlir::Value> idxScope(cachedIndexVals);
+    ScopedHashTableScope<llvm::StringRef, SmallVector<StringAttr>> tensorScope(tensorTable);
+
+    // Create an MLIR function for the given prototype.
+    builder.setInsertionPointToEnd(theModule.getBody());
+    mlir::toy::FuncOp function = mlirGen(*funcAST.getProto());
+    if (!function)
+      return nullptr;
+
+    // Let's start the body of the function now!
+    mlir::Block& entryBlock = *function.addEntryBlock();
+
+    // Declare all the function arguments in the symbol table.
+    auto protoArgs = funcAST.getProto()->getArgs();
+    for (const auto nameValue : llvm::zip(protoArgs, entryBlock.getArguments())) {
+      auto argName = std::get<0>(nameValue)->getName();
+      if (failed(declare(argName, std::get<1>(nameValue)))) {
+        return nullptr;
+      }
+    }
+
+    // Set the insertion point in the builder to the beginning of the function
+    // body, it will be used throughout the codegen to create operations in this
+    // function.
+    builder.setInsertionPointToStart(&entryBlock);
+
+    // Tie tensors' shapes
+    for (const auto& arg : protoArgs) {
+      auto argLoc = loc(arg->loc());
+      const auto& argName = arg->getName();
+      const auto& argType = arg->getType();
+      if (argType.isTensor()) {
+        auto [dims, dimAttrs] = getDims(argType, argLoc);
+        if (argType.hasDynamicDim()) {
+          const auto& argVal = symbolTable.lookup(argName);
+          if (!argVal) {
+            emitError(
+              argLoc,
+              std::string("The function arg ")
+                .append(argName)
+                .append(" is not found!")
+            );
+            std::exit(1);
+          }
+
+          mlir::Value newArgVal = builder.create<mlir::toy::TieDimsOp>(
+                                      argLoc, argVal.getType(), argVal, dims);
+
+          // Map argName to new value
+          symbolTable.insert(argName, newArgVal);
+        }
+
+        tensorTable.insert(argName, dimAttrs);
+      }
+    }
+
+
+    // Emit the body of the function.
+    if (mlir::failed(mlirGen(*funcAST.getBody()))) {
+      function.erase();
+      return nullptr;
+    }
+
+    // Implicitly return void if no return statement was emitted.
+    // FIXME: we may fix the parser instead to always return the last expression
+    // (this would possibly help the REPL case later)
+    mlir::toy::ReturnOp returnOp;
+    if (!entryBlock.empty())
+      returnOp = dyn_cast<mlir::toy::ReturnOp>(entryBlock.back());
+
+    if (!returnOp) {
+      mlir::Value funcRetVal = symbolTable.lookup(function.getSymName());
+      if (!!funcRetVal) {
+        returnOp = builder.create<mlir::toy::ReturnOp>(loc(funcAST.getProto()->loc()), funcRetVal);
+      } else {
+        returnOp = builder.create<mlir::toy::ReturnOp>(loc(funcAST.getProto()->loc()));
+      }
+    }
+
+    if (returnOp.getOperands().size() > 0) {
+      // Otherwise, if this return operation has an operand then add a result to
+      // the function.
+      function.setType(builder.getFunctionType(
+          function.getFunctionType().getInputs(), returnOp.getInput().getType()));
+    }
+
+    funcOps.insert({function.getSymName().str(), function});
+
+    return function;
+  }
+
+  /// Emit a return operation. This will return failure if any generation fails.
+  mlir::LogicalResult mlirGen(ReturnExprAST &ret) {
+    auto location = loc(ret.loc());
+
+    // 'return' takes an optional expression, handle that case here.
+    if (!ret.getExpr().has_value()) {
+      return mlir::failure();
+    }
+
+    mlir::Value expr = mlirGen(*ret.getExpr().value());
+    if (!expr) {
+      return mlir::failure();
+    }
+
+    // Otherwise, create mlir::toy::ReturnOp
+    builder.create<mlir::toy::ReturnOp>(location, expr);
+    return mlir::success();
   }
 
   /// Emit a add expression. It emits specific operations for builtin:
-  /// max(x, y).
-  mlir::Value mlirGen(MaxExprAST &call) {
-    SmallVector<mlir::Value> argVals;
-    for (auto& arg : call.getArgs()) {
-      auto val = mlirGen(*arg);
-      if (!val)
-        return nullptr;
-
-      argVals.push_back(val);
+  /// print(x).
+  mlir::Value mlirGen(PrintExprAST &call) {
+    auto arg = call.getArg();
+    StringRef argName = "";
+    if (auto varExpr = dyn_cast<VariableExprAST>(arg)) {
+      argName = varExpr->getName();
     }
 
-    auto v = builder.create<mlir::toy::MaxOp>(loc(call.loc()), mlir::TypeRange{argVals[0].getType()}, argVals);
+    auto argVal = mlirGen(*arg);
+    if (!argVal)
+      return nullptr;
+
+    auto v = builder.create<mlir::toy::PrintOp>(loc(call.loc()), builder.getI64Type(), argVal);
+    if (!argName.empty()) {
+      v->setAttr("argName", builder.getStringAttr(argName));
+    }
+
     return v;
   }
 
@@ -482,6 +474,87 @@ private:
     return callOp.getResult(0);
   }
 
+
+  /// Emit a add expression. It emits specific operations for builtin:
+  /// add(x, y, n).
+  mlir::Value mlirGen(AddExprAST &call) {
+    SmallVector<mlir::Value> argVals;
+    for (auto& arg : call.getArgs()) {
+      auto val = mlirGen(*arg);
+      if (!val)
+        return nullptr;
+
+      argVals.push_back(val);
+    }
+
+    auto v = builder.create<mlir::toy::AddOp>(loc(call.loc()), mlir::TypeRange{argVals[0].getType()}, argVals);
+    return v;
+  }
+
+  /// Emit a add expression. It emits specific operations for builtin:
+  /// max(x, y).
+  mlir::Value mlirGen(MaxExprAST &call) {
+    SmallVector<mlir::Value> argVals;
+    for (auto& arg : call.getArgs()) {
+      auto val = mlirGen(*arg);
+      if (!val)
+        return nullptr;
+
+      argVals.push_back(val);
+    }
+
+    auto v = builder.create<mlir::toy::MaxOp>(loc(call.loc()), mlir::TypeRange{argVals[0].getType()}, argVals);
+    return v;
+  }
+
+  /// Emit a add expression. It emits specific operations for builtin:
+  /// add(x, y, n).
+  mlir::Value mlirGen(DotExprAST &call) {
+    auto dotLoc = loc(call.loc());
+    SmallVector<mlir::Value> argVals;
+    SmallVector<StringAttr> aDims;
+    SmallVector<StringAttr> bDims;
+
+    int i = 0;
+    for (auto& arg : call.getArgs()) {
+      if (auto varExpr = dyn_cast<VariableExprAST>(arg.get())) {
+        auto varName = varExpr->getName();
+        if (i == 0) {
+          aDims = tensorTable.lookup(varName);
+          if (aDims.size() != 2) {
+            emitError(dotLoc, varName) << " is not a 2D tensor";
+            std::exit(1);
+          }
+        } else {
+          bDims = tensorTable.lookup(varName);
+          if (bDims.size() != 2) {
+            emitError(dotLoc, varName) << " is not a 2D tensor";
+            std::exit(1);
+          }
+        }
+      } else {
+        emitError(dotLoc, "dot op failed to parse operand #") << i;
+        std::exit(1);
+      }
+
+      auto val = mlirGen(*arg);
+      if (!val)
+        return nullptr;
+
+      argVals.push_back(val);
+      i++;
+    }
+
+    // Check if a[m, k] @ b[k, n]
+    if (aDims[1] != bDims[0]) {
+      emitError(dotLoc, "dot op: operand tensors have incompatible dims");
+      std::exit(1);
+    }
+
+    auto v = builder.create<mlir::toy::DotOp>(loc(call.loc()), argVals[0], argVals[1]);
+    return v;
+  }
+
   /// Recursive helper function to accumulate the data that compose an array
   /// literal. It flattens the nested structure in the supplied vector. For
   /// example with this array:
@@ -507,9 +580,9 @@ private:
   /// table lookup.
   mlir::Value mlirGen(VarDeclExprAST &vardecl) {
     auto varLoc = loc(vardecl.loc());
-    const auto& type = vardecl.getType();
+    const auto& varType = vardecl.getType();
     auto *init = vardecl.getInitVal();
-    if (!init && !type.isTensor()) {
+    if (!init && !varType.isTensor()) {
       emitError(varLoc, 
                 "The variable is invalid! "
                 "Either an initializer or a tensor type is required.");
@@ -523,7 +596,7 @@ private:
       } else {
         // init is a NumberExprAST
         auto numExpr = cast<NumberExprAST>(*init);
-        numExpr.setType(type.type);
+        numExpr.setType(varType.type);
         value = mlirGen(numExpr);
       }
 
@@ -536,55 +609,18 @@ private:
     }
 
     // The variable is a tensor
-    SmallVector<mlir::Value> dims;
-    // SmallVector<mlir::Value> dynamicSizes;
-    for (const auto& dim : type.shape) {
-      mlir::Value dimVal;
-      if (dim.isStatic()) {
-        std::string name = "%c" + std::to_string(dim.getValue());
-        const auto& nameAttr = builder.getStringAttr(name.c_str());
-        if (auto cachedDimVal = cachedIndexVals.lookup(nameAttr.getValue())) {
-          dimVal = cachedDimVal;
-        } else {
-          dimVal = builder.create<arith::ConstantIndexOp>(
-                                    varLoc, dim.getValue());
-          cachedIndexVals.insert(nameAttr.getValue(), dimVal);
-        }
-      } else {
-        if (auto cachedDimVal = cachedIndexVals.lookup(dim.getId())) {
-          dimVal = cachedDimVal;
-        } else {
-          dimVal = symbolTable.lookup(dim.getId());
-          if (!dimVal) {
-            emitError(
-              varLoc,
-              std::string("The identifier ")
-                .append(dim.getId())
-                .append(" is not found!")
-            );
-            std::exit(1);
-          }
-
-          if (!mlir::isa<mlir::IndexType>(dimVal.getType())) {
-            dimVal = builder.create<arith::IndexCastOp>(
-                                    varLoc, builder.getIndexType(), dimVal);
-            cachedIndexVals.insert(dim.getId(), dimVal);
-          }
-        }
-      }
-
-      dims.push_back(dimVal);
-    }
-
+    auto [dims, dimAttrs] = getDims(varType, varLoc);
     mlir::Value value = builder.create<mlir::toy::AllocOp>(
                             varLoc,
-                            getRankedTensorType(type),
+                            getRankedTensorType(varType),
                             dims);
 
     // Register the value in the symbol table.
-    if (failed(declare(vardecl.getName(), value))) {
-      return nullptr;
-    }
+    // if (failed(declare(vardecl.getName(), value))) {
+    //   return nullptr;
+    // }
+    symbolTable.insert(vardecl.getName(), value);
+    tensorTable.insert(vardecl.getName(), dimAttrs);
 
     return value;
   }
@@ -663,20 +699,27 @@ private:
       return mlirGen(cast<LiteralExprAST>(expr));
     case ExprAST::Expr_Num:
       return mlirGen(cast<NumberExprAST>(expr));
-    case ExprAST::Expr_Print:
-      return mlirGen(cast<PrintExprAST>(expr));
     case ExprAST::Expr_AssignOp:
       return mlirGen(cast<AssignExprAST>(expr));
     case ExprAST::Expr_BinOp:
       return mlirGen(cast<BinaryExprAST>(expr));
-    case ExprAST::Expr_Add:
-      return mlirGen(cast<AddExprAST>(expr));
-    case ExprAST::Expr_Max:
-      return mlirGen(cast<MaxExprAST>(expr));
+    
+    // Host ops
     case ExprAST::Expr_Random:
       return mlirGen(cast<RandomExprAST>(expr));
     case ExprAST::Expr_Call:
       return mlirGen(cast<CallExprAST>(expr));
+    case ExprAST::Expr_Print:
+      return mlirGen(cast<PrintExprAST>(expr));
+
+    // Device ops
+    case ExprAST::Expr_Add:
+      return mlirGen(cast<AddExprAST>(expr));
+    case ExprAST::Expr_Max:
+      return mlirGen(cast<MaxExprAST>(expr));
+    case ExprAST::Expr_Dot:
+      return mlirGen(cast<DotExprAST>(expr));
+
     default:
       emitError(loc(expr.loc()))
           << "MLIR codegen encountered an unhandled expr kind '"
