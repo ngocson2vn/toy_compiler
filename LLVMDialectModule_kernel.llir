@@ -16,13 +16,13 @@ define ptx_kernel void @add_two_vectors_kernel(i64 %0, i64 %1, ptr readonly capt
 
 13:                                               ; preds = %5
   %14 = or disjoint i64 %10, %9
-  %15 = getelementptr i32, ptr %2, i64 %14
-  %16 = load i32, ptr %15, align 4
-  %17 = getelementptr i32, ptr %3, i64 %14
-  %18 = load i32, ptr %17, align 4
-  %19 = add i32 %18, %16
-  %20 = getelementptr i32, ptr %4, i64 %14
-  store i32 %19, ptr %20, align 4
+  %15 = getelementptr float, ptr %2, i64 %14
+  %16 = load float, ptr %15, align 4
+  %17 = getelementptr float, ptr %3, i64 %14
+  %18 = load float, ptr %17, align 4
+  %19 = fadd float %16, %18
+  %20 = getelementptr float, ptr %4, i64 %14
+  store float %19, ptr %20, align 4
   br label %21
 
 21:                                               ; preds = %13, %5

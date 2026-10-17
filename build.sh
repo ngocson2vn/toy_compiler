@@ -7,7 +7,7 @@ echo "==================================================="
 echo "1. Update git submodules"
 echo "==================================================="
 if [[ ! -f ./.git_submodule_updated ]]; then
-  git submodule update --init --recursive
+  git submodule update --init --recursive --depth 1
   touch ./.git_submodule_updated
 fi
 echo "DONE"
