@@ -22,8 +22,8 @@ template <typename ElemType>
 void random(void* devicePtr, int numElems) {
   std::random_device rd;  // Will be used to obtain a seed for the random number engine
   std::mt19937 gen(rd()); // Standard mersenne_twister_engine seeded with rd()
-  std::uniform_int_distribution<int32_t> idist(0.0, 100);
-  std::uniform_real_distribution<float32> fdist(0.0, 0.1);
+  std::uniform_int_distribution<int32_t> idist(0.0, 10);
+  std::uniform_real_distribution<float32> fdist(-0.1, 0.1);
   std::vector<ElemType> hostVec(numElems, 0);
 
   if constexpr(std::is_same<ElemType, int>()) {
@@ -65,15 +65,15 @@ int64_t print(void* devicePtr, int numElems, char* argName) {
     }
     printf("]\n");
   } else if constexpr(std::is_same<ElemType, float32>()) {
-    printf("%.2f", hostVec[0]);
+    printf("%.3f", hostVec[0]);
     for (int i = 1; i < numElems; i++) {
-      printf(", %.2f", hostVec[i]);
+      printf(", %.3f", hostVec[i]);
     }
     printf("]\n");
   } else if constexpr(std::is_same<ElemType, float16>()) {
-    printf("%.2f", __half2float(hostVec[0]));
+    printf("%.3f", __half2float(hostVec[0]));
     for (int i = 1; i < numElems; i++) {
-      printf(", %.2f", __half2float(hostVec[i]));
+      printf(", %.3f", __half2float(hostVec[i]));
     }
     printf("]\n");
   } else {

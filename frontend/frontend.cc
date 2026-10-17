@@ -125,6 +125,8 @@ private:
   // Emit a F32 number
   mlir::Value mlirGen(NumberExprAST &expr) {
     auto v = expr.getValue();
+    OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPointToStart(builder.getBlock());
     if (expr.getType() == Type::I32) {
       return builder.create<mlir::toy::ConstantOp>(loc(expr.loc()), int32_t(v));
     } else if (expr.getType() == Type::F32) {
@@ -210,6 +212,7 @@ private:
       auto dataType = cast<mlir::RankedTensorType>(dstVal.getType());
       auto storeOp = builder.create<mlir::toy::StoreOp>(loc(dst.loc()), dataType, srcVal, dstVal);
       mlir::Value storeVal = storeOp.getResult();
+      symbolTable.insert(dst.getName(), storeVal);
       if (auto funcOp = storeOp->getParentOfType<mlir::toy::FuncOp>()) {
         symbolTable.insert(funcOp.getSymName(), storeVal);
       }

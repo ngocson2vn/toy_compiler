@@ -25,16 +25,16 @@ module {
     return %4 : memref<?x?xi32>
   }
   func.func @main() {
-    %0 = toy.constant 4 : i32 -> i32
-    %1 = toy.constant 8 : i32 -> i32
-    %2 = arith.index_cast %0 : i32 to index
-    %3 = arith.index_cast %1 : i32 to index
-    %4 = toy.alloc %2, %3 : -> memref<?x?xi32>
-    %5 = toy.alloc %2, %3 : -> memref<?x?xi32>
-    %6 = toy.alloc %2, %3 : -> memref<?x?xi32>
+    %0 = toy.constant 8 : i32 -> i32
+    %1 = toy.constant 4 : i32 -> i32
+    %2 = arith.index_cast %1 : i32 to index
+    %3 = arith.index_cast %0 : i32 to index
+    %4 = toy.alloc %2, %3 : memref<?x?xi32>
+    %5 = toy.alloc %2, %3 : memref<?x?xi32>
+    %6 = toy.alloc %2, %3 : memref<?x?xi32>
     %7 = toy.random %4 : memref<?x?xi32> -> memref<?x?xi32>
     %8 = toy.random %5 : memref<?x?xi32> -> memref<?x?xi32>
-    %9 = toy.call @add_two_vectors(%4, %5, %6, %0, %1) : (memref<?x?xi32>, memref<?x?xi32>, memref<?x?xi32>, i32, i32) -> memref<?x?xi32>
+    %9 = toy.call @add_two_vectors(%4, %5, %6, %1, %0) : (memref<?x?xi32>, memref<?x?xi32>, memref<?x?xi32>, i32, i32) -> memref<?x?xi32>
     %10 = toy.print %4 : memref<?x?xi32> {argName = "a"} -> i64
     %11 = toy.print %5 : memref<?x?xi32> {argName = "b"} -> i64
     %12 = toy.print %6 : memref<?x?xi32> {argName = "c"} -> i64
@@ -66,16 +66,16 @@ module {
     return %4 : memref<?x?xi32>
   }
   func.func @main() {
-    %0 = toy.constant 4 : i32 -> i32
-    %1 = toy.constant 8 : i32 -> i32
-    %2 = arith.index_cast %0 : i32 to index
-    %3 = arith.index_cast %1 : i32 to index
-    %4 = toy.alloc %2, %3 : -> memref<?x?xi32>
-    %5 = toy.alloc %2, %3 : -> memref<?x?xi32>
-    %6 = toy.alloc %2, %3 : -> memref<?x?xi32>
+    %0 = toy.constant 8 : i32 -> i32
+    %1 = toy.constant 4 : i32 -> i32
+    %2 = arith.index_cast %1 : i32 to index
+    %3 = arith.index_cast %0 : i32 to index
+    %4 = toy.alloc %2, %3 : memref<?x?xi32>
+    %5 = toy.alloc %2, %3 : memref<?x?xi32>
+    %6 = toy.alloc %2, %3 : memref<?x?xi32>
     %7 = toy.random %4 : memref<?x?xi32> -> memref<?x?xi32>
     %8 = toy.random %5 : memref<?x?xi32> -> memref<?x?xi32>
-    %9 = toy.call @add_two_vectors(%4, %5, %6, %0, %1) : (memref<?x?xi32>, memref<?x?xi32>, memref<?x?xi32>, i32, i32) -> memref<?x?xi32>
+    %9 = toy.call @add_two_vectors(%4, %5, %6, %1, %0) : (memref<?x?xi32>, memref<?x?xi32>, memref<?x?xi32>, i32, i32) -> memref<?x?xi32>
     %10 = toy.print %4 : memref<?x?xi32> {argName = "a"} -> i64
     %11 = toy.print %5 : memref<?x?xi32> {argName = "b"} -> i64
     %12 = toy.print %6 : memref<?x?xi32> {argName = "c"} -> i64
@@ -114,16 +114,16 @@ module {
     return %4 : memref<?x?xi32>
   }
   func.func @main() {
-    %0 = toy.constant 4 : i32 -> i32
-    %1 = toy.constant 8 : i32 -> i32
-    %2 = arith.index_cast %0 : i32 to index
-    %3 = arith.index_cast %1 : i32 to index
-    %4 = toy.alloc %2, %3 : -> memref<?x?xi32>
-    %5 = toy.alloc %2, %3 : -> memref<?x?xi32>
-    %6 = toy.alloc %2, %3 : -> memref<?x?xi32>
+    %0 = toy.constant 8 : i32 -> i32
+    %1 = toy.constant 4 : i32 -> i32
+    %2 = arith.index_cast %1 : i32 to index
+    %3 = arith.index_cast %0 : i32 to index
+    %4 = toy.alloc %2, %3 : memref<?x?xi32>
+    %5 = toy.alloc %2, %3 : memref<?x?xi32>
+    %6 = toy.alloc %2, %3 : memref<?x?xi32>
     %7 = toy.random %4 : memref<?x?xi32> -> memref<?x?xi32>
     %8 = toy.random %5 : memref<?x?xi32> -> memref<?x?xi32>
-    %9 = toy.call @add_two_vectors(%4, %5, %6, %0, %1) : (memref<?x?xi32>, memref<?x?xi32>, memref<?x?xi32>, i32, i32) -> memref<?x?xi32>
+    %9 = toy.call @add_two_vectors(%4, %5, %6, %1, %0) : (memref<?x?xi32>, memref<?x?xi32>, memref<?x?xi32>, i32, i32) -> memref<?x?xi32>
     %10 = toy.print %4 : memref<?x?xi32> {argName = "a"} -> i64
     %11 = toy.print %5 : memref<?x?xi32> {argName = "b"} -> i64
     %12 = toy.print %6 : memref<?x?xi32> {argName = "c"} -> i64
@@ -162,16 +162,16 @@ module {
     return %4 : memref<?x?xi32>
   }
   func.func @main() {
-    %0 = toy.constant 4 : i32 -> i32
-    %1 = toy.constant 8 : i32 -> i32
-    %2 = arith.index_cast %0 : i32 to index
-    %3 = arith.index_cast %1 : i32 to index
-    %4 = toy.alloc %2, %3 : -> memref<?x?xi32>
-    %5 = toy.alloc %2, %3 : -> memref<?x?xi32>
-    %6 = toy.alloc %2, %3 : -> memref<?x?xi32>
+    %0 = toy.constant 8 : i32 -> i32
+    %1 = toy.constant 4 : i32 -> i32
+    %2 = arith.index_cast %1 : i32 to index
+    %3 = arith.index_cast %0 : i32 to index
+    %4 = toy.alloc %2, %3 : memref<?x?xi32>
+    %5 = toy.alloc %2, %3 : memref<?x?xi32>
+    %6 = toy.alloc %2, %3 : memref<?x?xi32>
     %7 = toy.random %4 : memref<?x?xi32> -> memref<?x?xi32>
     %8 = toy.random %5 : memref<?x?xi32> -> memref<?x?xi32>
-    %9 = toy.call @add_two_vectors(%4, %5, %6, %0, %1) : (memref<?x?xi32>, memref<?x?xi32>, memref<?x?xi32>, i32, i32) -> memref<?x?xi32>
+    %9 = toy.call @add_two_vectors(%4, %5, %6, %1, %0) : (memref<?x?xi32>, memref<?x?xi32>, memref<?x?xi32>, i32, i32) -> memref<?x?xi32>
     %10 = toy.print %4 : memref<?x?xi32> {argName = "a"} -> i64
     %11 = toy.print %5 : memref<?x?xi32> {argName = "b"} -> i64
     %12 = toy.print %6 : memref<?x?xi32> {argName = "c"} -> i64
@@ -218,16 +218,16 @@ module {
     return %4 : memref<?x?xi32>
   }
   func.func @main() {
-    %0 = toy.constant 4 : i32 -> i32
-    %1 = toy.constant 8 : i32 -> i32
-    %2 = arith.index_cast %0 : i32 to index
-    %3 = arith.index_cast %1 : i32 to index
-    %4 = toy.alloc %2, %3 : -> memref<?x?xi32>
-    %5 = toy.alloc %2, %3 : -> memref<?x?xi32>
-    %6 = toy.alloc %2, %3 : -> memref<?x?xi32>
+    %0 = toy.constant 8 : i32 -> i32
+    %1 = toy.constant 4 : i32 -> i32
+    %2 = arith.index_cast %1 : i32 to index
+    %3 = arith.index_cast %0 : i32 to index
+    %4 = toy.alloc %2, %3 : memref<?x?xi32>
+    %5 = toy.alloc %2, %3 : memref<?x?xi32>
+    %6 = toy.alloc %2, %3 : memref<?x?xi32>
     %7 = toy.random %4 : memref<?x?xi32> -> memref<?x?xi32>
     %8 = toy.random %5 : memref<?x?xi32> -> memref<?x?xi32>
-    %9 = toy.call @add_two_vectors(%4, %5, %6, %0, %1) : (memref<?x?xi32>, memref<?x?xi32>, memref<?x?xi32>, i32, i32) -> memref<?x?xi32>
+    %9 = toy.call @add_two_vectors(%4, %5, %6, %1, %0) : (memref<?x?xi32>, memref<?x?xi32>, memref<?x?xi32>, i32, i32) -> memref<?x?xi32>
     %10 = toy.print %4 : memref<?x?xi32> {argName = "a"} -> i64
     %11 = toy.print %5 : memref<?x?xi32> {argName = "b"} -> i64
     %12 = toy.print %6 : memref<?x?xi32> {argName = "c"} -> i64
@@ -303,10 +303,10 @@ module {
     llvm.return %arg2 : !llvm.ptr
   }
   llvm.func @main() {
-    %0 = llvm.mlir.constant(4 : i32) : i32
-    %1 = llvm.mlir.constant(8 : i32) : i32
-    %2 = arith.index_cast %0 : i32 to index
-    %3 = arith.index_cast %1 : i32 to index
+    %0 = llvm.mlir.constant(8 : i32) : i32
+    %1 = llvm.mlir.constant(4 : i32) : i32
+    %2 = arith.index_cast %1 : i32 to index
+    %3 = arith.index_cast %0 : i32 to index
     %4 = arith.index_cast %2 : index to i32
     %5 = arith.index_cast %3 : index to i32
     %6 = llvm.mul %4, %5 : i32
@@ -332,7 +332,7 @@ module {
     %26 = llvm.mul %24, %25 : i32
     %27 = llvm.mlir.constant(2 : i32) : i32
     %28 = llvm.call @toy_random(%13, %26, %27) : (!llvm.ptr, i32, i32) -> !llvm.ptr
-    %29 = llvm.call @add_two_vectors(%8, %13, %18, %0, %1) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32) -> !llvm.ptr
+    %29 = llvm.call @add_two_vectors(%8, %13, %18, %1, %0) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32) -> !llvm.ptr
     %30 = arith.index_cast %2 : index to i32
     %31 = arith.index_cast %3 : index to i32
     %32 = llvm.mul %30, %31 : i32
@@ -428,8 +428,8 @@ module {
     %2 = llvm.mlir.constant(1 : i32) : i32
     %3 = llvm.mlir.constant("a\00") : !llvm.array<2 x i8>
     %4 = llvm.mlir.constant(2 : i32) : i32
-    %5 = llvm.mlir.constant(4 : i32) : i32
-    %6 = llvm.mlir.constant(8 : i32) : i32
+    %5 = llvm.mlir.constant(8 : i32) : i32
+    %6 = llvm.mlir.constant(4 : i32) : i32
     %c4_i32 = arith.constant 4 : i32
     %c8_i32 = arith.constant 8 : i32
     %7 = llvm.mul %c4_i32, %c8_i32 : i32
@@ -442,7 +442,7 @@ module {
     %14 = llvm.call @toy_random(%8, %13, %4) : (!llvm.ptr, i32, i32) -> !llvm.ptr
     %15 = llvm.mul %c4_i32, %c8_i32 : i32
     %16 = llvm.call @toy_random(%10, %15, %4) : (!llvm.ptr, i32, i32) -> !llvm.ptr
-    %17 = llvm.call @add_two_vectors(%8, %10, %12, %5, %6) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32) -> !llvm.ptr
+    %17 = llvm.call @add_two_vectors(%8, %10, %12, %6, %5) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32) -> !llvm.ptr
     %18 = llvm.mul %c4_i32, %c8_i32 : i32
     %19 = llvm.alloca %2 x !llvm.array<2 x i8> : (i32) -> !llvm.ptr
     llvm.store %3, %19 : !llvm.array<2 x i8>, !llvm.ptr
@@ -511,8 +511,8 @@ module {
     %2 = llvm.mlir.constant(1 : i32) : i32
     %3 = llvm.mlir.constant("a\00") : !llvm.array<2 x i8>
     %4 = llvm.mlir.constant(2 : i32) : i32
-    %5 = llvm.mlir.constant(4 : i32) : i32
-    %6 = llvm.mlir.constant(8 : i32) : i32
+    %5 = llvm.mlir.constant(8 : i32) : i32
+    %6 = llvm.mlir.constant(4 : i32) : i32
     %c4_i32 = arith.constant 4 : i32
     %c8_i32 = arith.constant 8 : i32
     %7 = llvm.mul %c4_i32, %c8_i32 : i32
@@ -521,7 +521,7 @@ module {
     %10 = llvm.call @toy_alloc(%7, %4) : (i32, i32) -> !llvm.ptr
     %11 = llvm.call @toy_random(%8, %7, %4) : (!llvm.ptr, i32, i32) -> !llvm.ptr
     %12 = llvm.call @toy_random(%9, %7, %4) : (!llvm.ptr, i32, i32) -> !llvm.ptr
-    %13 = llvm.call @add_two_vectors(%8, %9, %10, %5, %6) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32) -> !llvm.ptr
+    %13 = llvm.call @add_two_vectors(%8, %9, %10, %6, %5) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32) -> !llvm.ptr
     %14 = llvm.alloca %2 x !llvm.array<2 x i8> : (i32) -> !llvm.ptr
     llvm.store %3, %14 : !llvm.array<2 x i8>, !llvm.ptr
     %15 = llvm.call @toy_print(%8, %7, %4, %14) : (!llvm.ptr, i32, i32, !llvm.ptr) -> i64
@@ -589,8 +589,8 @@ module {
     %2 = llvm.mlir.constant(1 : i32) : i32
     %3 = llvm.mlir.constant("a\00") : !llvm.array<2 x i8>
     %4 = llvm.mlir.constant(2 : i32) : i32
-    %5 = llvm.mlir.constant(4 : i32) : i32
-    %6 = llvm.mlir.constant(8 : i32) : i32
+    %5 = llvm.mlir.constant(8 : i32) : i32
+    %6 = llvm.mlir.constant(4 : i32) : i32
     %c4_i32 = arith.constant 4 : i32
     %c8_i32 = arith.constant 8 : i32
     %7 = llvm.mul %c4_i32, %c8_i32 : i32
@@ -599,7 +599,7 @@ module {
     %10 = llvm.call @toy_alloc(%7, %4) : (i32, i32) -> !llvm.ptr
     %11 = llvm.call @toy_random(%8, %7, %4) : (!llvm.ptr, i32, i32) -> !llvm.ptr
     %12 = llvm.call @toy_random(%9, %7, %4) : (!llvm.ptr, i32, i32) -> !llvm.ptr
-    %13 = llvm.call @add_two_vectors(%8, %9, %10, %5, %6) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32) -> !llvm.ptr
+    %13 = llvm.call @add_two_vectors(%8, %9, %10, %6, %5) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32) -> !llvm.ptr
     %14 = llvm.alloca %2 x !llvm.array<2 x i8> : (i32) -> !llvm.ptr
     llvm.store %3, %14 : !llvm.array<2 x i8>, !llvm.ptr
     %15 = llvm.call @toy_print(%8, %7, %4, %14) : (!llvm.ptr, i32, i32, !llvm.ptr) -> i64
@@ -682,8 +682,8 @@ module attributes {gpu.container_module} {
     %2 = llvm.mlir.constant(1 : i32) : i32
     %3 = llvm.mlir.constant("a\00") : !llvm.array<2 x i8>
     %4 = llvm.mlir.constant(2 : i32) : i32
-    %5 = llvm.mlir.constant(4 : i32) : i32
-    %6 = llvm.mlir.constant(8 : i32) : i32
+    %5 = llvm.mlir.constant(8 : i32) : i32
+    %6 = llvm.mlir.constant(4 : i32) : i32
     %c4_i32 = arith.constant 4 : i32
     %c8_i32 = arith.constant 8 : i32
     %7 = llvm.mul %c4_i32, %c8_i32 : i32
@@ -692,7 +692,7 @@ module attributes {gpu.container_module} {
     %10 = llvm.call @toy_alloc(%7, %4) : (i32, i32) -> !llvm.ptr
     %11 = llvm.call @toy_random(%8, %7, %4) : (!llvm.ptr, i32, i32) -> !llvm.ptr
     %12 = llvm.call @toy_random(%9, %7, %4) : (!llvm.ptr, i32, i32) -> !llvm.ptr
-    %13 = llvm.call @add_two_vectors(%8, %9, %10, %5, %6) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32) -> !llvm.ptr
+    %13 = llvm.call @add_two_vectors(%8, %9, %10, %6, %5) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32) -> !llvm.ptr
     %14 = llvm.alloca %2 x !llvm.array<2 x i8> : (i32) -> !llvm.ptr
     llvm.store %3, %14 : !llvm.array<2 x i8>, !llvm.ptr
     %15 = llvm.call @toy_print(%8, %7, %4, %14) : (!llvm.ptr, i32, i32, !llvm.ptr) -> i64
@@ -787,8 +787,8 @@ module attributes {gpu.container_module} {
     %2 = llvm.mlir.constant(1 : i32) : i32
     %3 = llvm.mlir.constant("a\00") : !llvm.array<2 x i8>
     %4 = llvm.mlir.constant(2 : i32) : i32
-    %5 = llvm.mlir.constant(4 : i32) : i32
-    %6 = llvm.mlir.constant(8 : i32) : i32
+    %5 = llvm.mlir.constant(8 : i32) : i32
+    %6 = llvm.mlir.constant(4 : i32) : i32
     %c4_i32 = arith.constant 4 : i32
     %c8_i32 = arith.constant 8 : i32
     %7 = llvm.mul %c4_i32, %c8_i32 : i32
@@ -797,7 +797,7 @@ module attributes {gpu.container_module} {
     %10 = llvm.call @toy_alloc(%7, %4) : (i32, i32) -> !llvm.ptr
     %11 = llvm.call @toy_random(%8, %7, %4) : (!llvm.ptr, i32, i32) -> !llvm.ptr
     %12 = llvm.call @toy_random(%9, %7, %4) : (!llvm.ptr, i32, i32) -> !llvm.ptr
-    %13 = llvm.call @add_two_vectors(%8, %9, %10, %5, %6) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32) -> !llvm.ptr
+    %13 = llvm.call @add_two_vectors(%8, %9, %10, %6, %5) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32) -> !llvm.ptr
     %14 = llvm.alloca %2 x !llvm.array<2 x i8> : (i32) -> !llvm.ptr
     llvm.store %3, %14 : !llvm.array<2 x i8>, !llvm.ptr
     %15 = llvm.call @toy_print(%8, %7, %4, %14) : (!llvm.ptr, i32, i32, !llvm.ptr) -> i64
@@ -877,8 +877,8 @@ module attributes {gpu.container_module} {
     %2 = llvm.mlir.constant(1 : i32) : i32
     %3 = llvm.mlir.constant("a\00") : !llvm.array<2 x i8>
     %4 = llvm.mlir.constant(2 : i32) : i32
-    %5 = llvm.mlir.constant(4 : i32) : i32
-    %6 = llvm.mlir.constant(8 : i32) : i32
+    %5 = llvm.mlir.constant(8 : i32) : i32
+    %6 = llvm.mlir.constant(4 : i32) : i32
     %c4_i32 = arith.constant 4 : i32
     %c8_i32 = arith.constant 8 : i32
     %7 = llvm.mul %c4_i32, %c8_i32 : i32
@@ -887,7 +887,7 @@ module attributes {gpu.container_module} {
     %10 = llvm.call @toy_alloc(%7, %4) : (i32, i32) -> !llvm.ptr
     %11 = llvm.call @toy_random(%8, %7, %4) : (!llvm.ptr, i32, i32) -> !llvm.ptr
     %12 = llvm.call @toy_random(%9, %7, %4) : (!llvm.ptr, i32, i32) -> !llvm.ptr
-    %13 = llvm.call @add_two_vectors(%8, %9, %10, %5, %6) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32) -> !llvm.ptr
+    %13 = llvm.call @add_two_vectors(%8, %9, %10, %6, %5) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32) -> !llvm.ptr
     %14 = llvm.alloca %2 x !llvm.array<2 x i8> : (i32) -> !llvm.ptr
     llvm.store %3, %14 : !llvm.array<2 x i8>, !llvm.ptr
     %15 = llvm.call @toy_print(%8, %7, %4, %14) : (!llvm.ptr, i32, i32, !llvm.ptr) -> i64
@@ -969,8 +969,8 @@ module attributes {gpu.container_module} {
     %2 = llvm.mlir.constant(1 : i32) : i32
     %3 = llvm.mlir.constant("a\00") : !llvm.array<2 x i8>
     %4 = llvm.mlir.constant(2 : i32) : i32
-    %5 = llvm.mlir.constant(4 : i32) : i32
-    %6 = llvm.mlir.constant(8 : i32) : i32
+    %5 = llvm.mlir.constant(8 : i32) : i32
+    %6 = llvm.mlir.constant(4 : i32) : i32
     %c4_i32 = arith.constant 4 : i32
     %c8_i32 = arith.constant 8 : i32
     %7 = llvm.mul %c4_i32, %c8_i32 : i32
@@ -979,7 +979,7 @@ module attributes {gpu.container_module} {
     %10 = llvm.call @toy_alloc(%7, %4) : (i32, i32) -> !llvm.ptr
     %11 = llvm.call @toy_random(%8, %7, %4) : (!llvm.ptr, i32, i32) -> !llvm.ptr
     %12 = llvm.call @toy_random(%9, %7, %4) : (!llvm.ptr, i32, i32) -> !llvm.ptr
-    %13 = llvm.call @add_two_vectors(%8, %9, %10, %5, %6) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32) -> !llvm.ptr
+    %13 = llvm.call @add_two_vectors(%8, %9, %10, %6, %5) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32) -> !llvm.ptr
     %14 = llvm.alloca %2 x !llvm.array<2 x i8> : (i32) -> !llvm.ptr
     llvm.store %3, %14 : !llvm.array<2 x i8>, !llvm.ptr
     %15 = llvm.call @toy_print(%8, %7, %4, %14) : (!llvm.ptr, i32, i32, !llvm.ptr) -> i64
@@ -1064,8 +1064,8 @@ module attributes {gpu.container_module} {
     %2 = llvm.mlir.constant(1 : i32) : i32
     %3 = llvm.mlir.constant("a\00") : !llvm.array<2 x i8>
     %4 = llvm.mlir.constant(2 : i32) : i32
-    %5 = llvm.mlir.constant(4 : i32) : i32
-    %6 = llvm.mlir.constant(8 : i32) : i32
+    %5 = llvm.mlir.constant(8 : i32) : i32
+    %6 = llvm.mlir.constant(4 : i32) : i32
     %c4_i32 = arith.constant 4 : i32
     %c8_i32 = arith.constant 8 : i32
     %7 = llvm.mul %c4_i32, %c8_i32 : i32
@@ -1074,7 +1074,7 @@ module attributes {gpu.container_module} {
     %10 = llvm.call @toy_alloc(%7, %4) : (i32, i32) -> !llvm.ptr
     %11 = llvm.call @toy_random(%8, %7, %4) : (!llvm.ptr, i32, i32) -> !llvm.ptr
     %12 = llvm.call @toy_random(%9, %7, %4) : (!llvm.ptr, i32, i32) -> !llvm.ptr
-    %13 = llvm.call @add_two_vectors(%8, %9, %10, %5, %6) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32) -> !llvm.ptr
+    %13 = llvm.call @add_two_vectors(%8, %9, %10, %6, %5) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32) -> !llvm.ptr
     %14 = llvm.alloca %2 x !llvm.array<2 x i8> : (i32) -> !llvm.ptr
     llvm.store %3, %14 : !llvm.array<2 x i8>, !llvm.ptr
     %15 = llvm.call @toy_print(%8, %7, %4, %14) : (!llvm.ptr, i32, i32, !llvm.ptr) -> i64
@@ -1157,8 +1157,8 @@ module attributes {gpu.container_module} {
     %2 = llvm.mlir.constant(1 : i32) : i32
     %3 = llvm.mlir.constant("a\00") : !llvm.array<2 x i8>
     %4 = llvm.mlir.constant(2 : i32) : i32
-    %5 = llvm.mlir.constant(4 : i32) : i32
-    %6 = llvm.mlir.constant(8 : i32) : i32
+    %5 = llvm.mlir.constant(8 : i32) : i32
+    %6 = llvm.mlir.constant(4 : i32) : i32
     %c4_i32 = arith.constant 4 : i32
     %c8_i32 = arith.constant 8 : i32
     %7 = llvm.mul %c4_i32, %c8_i32 : i32
@@ -1167,7 +1167,7 @@ module attributes {gpu.container_module} {
     %10 = llvm.call @toy_alloc(%7, %4) : (i32, i32) -> !llvm.ptr
     %11 = llvm.call @toy_random(%8, %7, %4) : (!llvm.ptr, i32, i32) -> !llvm.ptr
     %12 = llvm.call @toy_random(%9, %7, %4) : (!llvm.ptr, i32, i32) -> !llvm.ptr
-    %13 = llvm.call @add_two_vectors(%8, %9, %10, %5, %6) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32) -> !llvm.ptr
+    %13 = llvm.call @add_two_vectors(%8, %9, %10, %6, %5) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32) -> !llvm.ptr
     %14 = llvm.alloca %2 x !llvm.array<2 x i8> : (i32) -> !llvm.ptr
     llvm.store %3, %14 : !llvm.array<2 x i8>, !llvm.ptr
     %15 = llvm.call @toy_print(%8, %7, %4, %14) : (!llvm.ptr, i32, i32, !llvm.ptr) -> i64
@@ -1248,8 +1248,8 @@ module attributes {gpu.container_module} {
     %2 = llvm.mlir.constant(1 : i32) : i32
     %3 = llvm.mlir.constant("a\00") : !llvm.array<2 x i8>
     %4 = llvm.mlir.constant(2 : i32) : i32
-    %5 = llvm.mlir.constant(4 : i32) : i32
-    %6 = llvm.mlir.constant(8 : i32) : i32
+    %5 = llvm.mlir.constant(8 : i32) : i32
+    %6 = llvm.mlir.constant(4 : i32) : i32
     %c4_i32 = arith.constant 4 : i32
     %c8_i32 = arith.constant 8 : i32
     %7 = llvm.mul %c4_i32, %c8_i32 : i32
@@ -1258,7 +1258,7 @@ module attributes {gpu.container_module} {
     %10 = llvm.call @toy_alloc(%7, %4) : (i32, i32) -> !llvm.ptr
     %11 = llvm.call @toy_random(%8, %7, %4) : (!llvm.ptr, i32, i32) -> !llvm.ptr
     %12 = llvm.call @toy_random(%9, %7, %4) : (!llvm.ptr, i32, i32) -> !llvm.ptr
-    %13 = llvm.call @add_two_vectors(%8, %9, %10, %5, %6) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32) -> !llvm.ptr
+    %13 = llvm.call @add_two_vectors(%8, %9, %10, %6, %5) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32) -> !llvm.ptr
     %14 = llvm.alloca %2 x !llvm.array<2 x i8> : (i32) -> !llvm.ptr
     llvm.store %3, %14 : !llvm.array<2 x i8>, !llvm.ptr
     %15 = llvm.call @toy_print(%8, %7, %4, %14) : (!llvm.ptr, i32, i32, !llvm.ptr) -> i64
@@ -1339,8 +1339,8 @@ module attributes {gpu.container_module} {
     %2 = llvm.mlir.constant(1 : i32) : i32
     %3 = llvm.mlir.constant("a\00") : !llvm.array<2 x i8>
     %4 = llvm.mlir.constant(2 : i32) : i32
-    %5 = llvm.mlir.constant(4 : i32) : i32
-    %6 = llvm.mlir.constant(8 : i32) : i32
+    %5 = llvm.mlir.constant(8 : i32) : i32
+    %6 = llvm.mlir.constant(4 : i32) : i32
     %7 = llvm.mlir.constant(4 : i32) : i32
     %8 = llvm.mlir.constant(8 : i32) : i32
     %9 = llvm.mul %7, %8 : i32
@@ -1349,7 +1349,7 @@ module attributes {gpu.container_module} {
     %12 = llvm.call @toy_alloc(%9, %4) : (i32, i32) -> !llvm.ptr
     %13 = llvm.call @toy_random(%10, %9, %4) : (!llvm.ptr, i32, i32) -> !llvm.ptr
     %14 = llvm.call @toy_random(%11, %9, %4) : (!llvm.ptr, i32, i32) -> !llvm.ptr
-    %15 = llvm.call @add_two_vectors(%10, %11, %12, %5, %6) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32) -> !llvm.ptr
+    %15 = llvm.call @add_two_vectors(%10, %11, %12, %6, %5) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32) -> !llvm.ptr
     %16 = llvm.alloca %2 x !llvm.array<2 x i8> : (i32) -> !llvm.ptr
     llvm.store %3, %16 : !llvm.array<2 x i8>, !llvm.ptr
     %17 = llvm.call @toy_print(%10, %9, %4, %16) : (!llvm.ptr, i32, i32, !llvm.ptr) -> i64
@@ -1430,8 +1430,8 @@ module attributes {gpu.container_module} {
     %2 = llvm.mlir.constant(1 : i32) : i32
     %3 = llvm.mlir.constant("a\00") : !llvm.array<2 x i8>
     %4 = llvm.mlir.constant(2 : i32) : i32
-    %5 = llvm.mlir.constant(4 : i32) : i32
-    %6 = llvm.mlir.constant(8 : i32) : i32
+    %5 = llvm.mlir.constant(8 : i32) : i32
+    %6 = llvm.mlir.constant(4 : i32) : i32
     %7 = llvm.mlir.constant(4 : i32) : i32
     %8 = llvm.mlir.constant(8 : i32) : i32
     %9 = llvm.mul %7, %8 : i32
@@ -1440,7 +1440,7 @@ module attributes {gpu.container_module} {
     %12 = llvm.call @toy_alloc(%9, %4) : (i32, i32) -> !llvm.ptr
     %13 = llvm.call @toy_random(%10, %9, %4) : (!llvm.ptr, i32, i32) -> !llvm.ptr
     %14 = llvm.call @toy_random(%11, %9, %4) : (!llvm.ptr, i32, i32) -> !llvm.ptr
-    %15 = llvm.call @add_two_vectors(%10, %11, %12, %5, %6) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32) -> !llvm.ptr
+    %15 = llvm.call @add_two_vectors(%10, %11, %12, %6, %5) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32) -> !llvm.ptr
     %16 = llvm.alloca %2 x !llvm.array<2 x i8> : (i32) -> !llvm.ptr
     llvm.store %3, %16 : !llvm.array<2 x i8>, !llvm.ptr
     %17 = llvm.call @toy_print(%10, %9, %4, %16) : (!llvm.ptr, i32, i32, !llvm.ptr) -> i64
@@ -1478,15 +1478,15 @@ module attributes {gpu.container_module} {
     gpu.launch_func  @add_two_vectors_kernel::@add_two_vectors_kernel blocks in (%13, %2, %2) threads in (%1, %2, %2) : i64 args(%5 : i64, %4 : i64, %arg0 : !llvm.ptr, %arg1 : !llvm.ptr, %arg2 : !llvm.ptr)
     llvm.return %arg2 : !llvm.ptr
   }
-  gpu.binary @add_two_vectors_kernel  [#gpu.object<#nvvm.target<chip = "sm_89", features = "+ptx84">, properties = {ISAToBinaryTimeInMs = 10 : i64, LLVMIRToISATimeInMs = 12 : i64}, bin = "\7FELF\02\01\013\07\00\00\00\00\00\00\00\02\00\BE\00|\00\00\00\00\00\00\00\00\00\00\00\00\0C\00\00\00\00\00\00\00\09\00\00\00\00\00\00Y\05Y\00@\008\00\03\00@\00\0C\00\01\00\00.shstrtab\00.strtab\00.symtab\00.symtab_shndx\00.nv.info\00.text.add_two_vectors_kernel\00.nv.info.add_two_vectors_kernel\00.nv.shared.add_two_vectors_kernel\00.nv.constant0.add_two_vectors_kernel\00.rel.nv.constant0.add_two_vectors_kernel\00.debug_frame\00.rel.debug_frame\00.rela.debug_frame\00.nv.callgraph\00.nv.prototype\00.nv.rel.action\00\00.shstrtab\00.strtab\00.symtab\00.symtab_shndx\00.nv.info\00.text.add_two_vectors_kernel\00.nv.info.add_two_vectors_kernel\00.nv.shared.add_two_vectors_kernel\00.rel.nv.constant0.add_two_vectors_kernel\00.nv.constant0.add_two_vectors_kernel\00.debug_frame\00.rel.debug_frame\00.rela.debug_frame\00.nv.callgraph\00.nv.prototype\00.nv.rel.action\00add_two_vectors_kernel\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\002\00\00\00\03\00\0B\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\BA\00\00\00\03\00\0A\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\DF\00\00\00\03\00\04\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\0F\01\00\00\03\00\07\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00+\01\00\00\03\00\08\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00:\01\00\00\12\10\0B\00\00\00\00\00\00\00\00\00\80\02\00\00\00\00\00\00\FF\FF\FF\FF$\00\00\00\00\00\00\00\FF\FF\FF\FF\FF\FF\FF\FF\03\00\04|\FF\FF\FF\FF\0F\0C\81\80\80(\00\08\FF\81\80(\08\81\80\80(\00\00\00\FF\FF\FF\FF4\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\80\02\00\00\00\00\00\00\04\04\00\00\00\04 \00\00\00\0C\81\80\80(\00\048\00\00\00\00\00\00\00\00\00\00\04/\08\00\06\00\00\00\0C\00\00\00\04\12\08\00\06\00\00\00\00\00\00\00\04\11\08\00\06\00\00\00\00\00\00\00\04\12\08\00\06\00\00\00\00\00\00\00\047\04\00|\00\00\00\04\0A\08\00\02\00\00\00`\01(\00\03\19(\00\04\17\0C\00\00\00\00\00\04\00 \00\00\F5!\00\04\17\0C\00\00\00\00\00\03\00\18\00\00\F5!\00\04\17\0C\00\00\00\00\00\02\00\10\00\00\F5!\00\04\17\0C\00\00\00\00\00\01\00\08\00\00\F0!\00\04\17\0C\00\00\00\00\00\00\00\00\00\00\F0!\00\03\1B\FF\00\04\1C\08\00\80\00\00\00p\01\00\00\04\05\0C\00\80\00\00\00\01\00\00\00\01\00\00\00\00\00\00\00\FF\FF\FF\FF\00\00\00\00\FE\FF\FF\FF\00\00\00\00\FD\FF\FF\FF\00\00\00\00\FC\FF\FF\FFs\00\00\00\00\00\00\00\00\00\00\11%\00\056D\00\00\00\00\00\00\00\02\00\00\00\06\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00$v\01\FF\00\0A\00\00\FF\00\8E\07\00\E4\0F\00\19y\02\00\00\00\00\00\00%\00\00\00(\0E\00\19y\05\00\00\00\00\00\00!\00\00\00b\0E\00%x\02\02\80\00\00\00\FF\00\8E\07\00\CA\1F\00\10z\00\02\00X\00\00\FF\E1\F3\07\00\C8\0F\00\0Cr\00\00\05\00\00\00p@\F0\03\00\E4/\00\10z\00\03\00Y\00\00\FF\E5\FF\00\00\C8\0F\00\0Cr\00\00\FF\00\00\00\00C\F0\03\00\DA\0F\00M\89\00\00\00\00\00\00\00\00\80\03\00\EA\0F\00\12r\05\02\05\00\00\00\FF\FC\8E\07\00\E2\0F\00\B9z\04\00\00F\00\00\00\0A\00\00\00\C6\0F\00\19x\00\05\02\00\00\00\03\02\01\00\00\E2\0F\04$x\06\05\04\00\00\00\FF\00\8E\07\00\CA\0F\00\10z\04\06\00^\00\00\FF\E0\F3\07\00\E4\0F\04\10z\02\06\00\\\00\00\FF\E0\F1\07\00\E4\0F\00\10z\05\00\00_\00\00\FF\E4\FF\00\00\E4\0F\04\10z\03\00\00]\00\00\FF\E4\7F\00\00\C8\0F\00\81y\05\04\04\00\00\00\00\19\1E\0C\00\A8\0E\00\81y\02\02\04\00\00\00\00\19\1E\0C\00\A2\0E\00\10z\06\06\00`\00\00\FF\E0\F1\07\00\C8\0F\00\10z\07\00\00a\00\00\FF\E4\7F\00\00\E2\0F\00$x\09\02\01\00\00\00\05\02\8E\07\00\CAO\00\86y\00\06\09\00\00\00\04\19\10\0C\00\E2\0F\00My\00\00\00\00\00\00\00\00\80\03\00\EA\0F\00Gy\00\00\F0\FF\FF\FF\FF\FF\83\03\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\01\00\00\00\03\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00@\00\00\00\00\00\00\00:\01\00\00\00\00\00\00\00\00\00\00\00\00\00\00\01\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\0B\00\00\00\03\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00z\01\00\00\00\00\00\00Q\01\00\00\00\00\00\00\00\00\00\00\00\00\00\00\01\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\13\00\00\00\02\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\D0\02\00\00\00\00\00\00\A8\00\00\00\00\00\00\00\02\00\00\00\06\00\00\00\08\00\00\00\00\00\00\00\18\00\00\00\00\00\00\00\DF\00\00\00\01\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00x\03\00\00\00\00\00\00p\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\01\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00)\00\00\00\00\00\00p\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\E8\03\00\00\00\00\00\000\00\00\00\00\00\00\00\03\00\00\00\00\00\00\00\04\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00O\00\00\00\00\00\00p@\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\18\04\00\00\00\00\00\00\88\00\00\00\00\00\00\00\03\00\00\00\0B\00\00\00\04\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\0F\01\00\00\01\00\00p\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\A0\04\00\00\00\00\00\00 \00\00\00\00\00\00\00\03\00\00\00\00\00\00\00\04\00\00\00\00\00\00\00\08\00\00\00\00\00\00\00+\01\00\00\0B\00\00p\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\C0\04\00\00\00\00\00\00\10\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\08\00\00\00\00\00\00\00\08\00\00\00\00\00\00\00\EC\00\00\00\09\00\00\00@\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\D0\04\00\00\00\00\00\00\10\00\00\00\00\00\00\00\03\00\00\00\04\00\00\00\08\00\00\00\00\00\00\00\10\00\00\00\00\00\00\00\91\00\00\00\01\00\00\00B\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\E0\04\00\00\00\00\00\00\88\01\00\00\00\00\00\00\00\00\00\00\0B\00\00\00\04\00\00\00\00\00\00\00\00\00\00\00\00\00\00\002\00\00\00\01\00\00\00\06\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\80\06\00\00\00\00\00\00\80\02\00\00\00\00\00\00\03\00\00\00\06\00\00\0C\80\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\06\00\00\00\05\00\00\00\00\0C\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\A8\00\00\00\00\00\00\00\A8\00\00\00\00\00\00\00\08\00\00\00\00\00\00\00\01\00\00\00\05\00\00\00\E0\04\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00 \04\00\00\00\00\00\00 \04\00\00\00\00\00\00\08\00\00\00\00\00\00\00\01\00\00\00\05\00\00\00\00\0C\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\A8\00\00\00\00\00\00\00\A8\00\00\00\00\00\00\00\08\00\00\00\00\00\00\00">]
+  gpu.binary @add_two_vectors_kernel  [#gpu.object<#nvvm.target<chip = "sm_89", features = "+ptx84">, properties = {ISAToBinaryTimeInMs = 10 : i64, LLVMIRToISATimeInMs = 13 : i64}, bin = "\7FELF\02\01\013\07\00\00\00\00\00\00\00\02\00\BE\00|\00\00\00\00\00\00\00\00\00\00\00\00\0C\00\00\00\00\00\00\00\09\00\00\00\00\00\00Y\05Y\00@\008\00\03\00@\00\0C\00\01\00\00.shstrtab\00.strtab\00.symtab\00.symtab_shndx\00.nv.info\00.text.add_two_vectors_kernel\00.nv.info.add_two_vectors_kernel\00.nv.shared.add_two_vectors_kernel\00.nv.constant0.add_two_vectors_kernel\00.rel.nv.constant0.add_two_vectors_kernel\00.debug_frame\00.rel.debug_frame\00.rela.debug_frame\00.nv.callgraph\00.nv.prototype\00.nv.rel.action\00\00.shstrtab\00.strtab\00.symtab\00.symtab_shndx\00.nv.info\00.text.add_two_vectors_kernel\00.nv.info.add_two_vectors_kernel\00.nv.shared.add_two_vectors_kernel\00.rel.nv.constant0.add_two_vectors_kernel\00.nv.constant0.add_two_vectors_kernel\00.debug_frame\00.rel.debug_frame\00.rela.debug_frame\00.nv.callgraph\00.nv.prototype\00.nv.rel.action\00add_two_vectors_kernel\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\002\00\00\00\03\00\0B\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\BA\00\00\00\03\00\0A\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\DF\00\00\00\03\00\04\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\0F\01\00\00\03\00\07\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00+\01\00\00\03\00\08\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00:\01\00\00\12\10\0B\00\00\00\00\00\00\00\00\00\80\02\00\00\00\00\00\00\FF\FF\FF\FF$\00\00\00\00\00\00\00\FF\FF\FF\FF\FF\FF\FF\FF\03\00\04|\FF\FF\FF\FF\0F\0C\81\80\80(\00\08\FF\81\80(\08\81\80\80(\00\00\00\FF\FF\FF\FF4\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\80\02\00\00\00\00\00\00\04\04\00\00\00\04 \00\00\00\0C\81\80\80(\00\048\00\00\00\00\00\00\00\00\00\00\04/\08\00\06\00\00\00\0C\00\00\00\04\12\08\00\06\00\00\00\00\00\00\00\04\11\08\00\06\00\00\00\00\00\00\00\04\12\08\00\06\00\00\00\00\00\00\00\047\04\00|\00\00\00\04\0A\08\00\02\00\00\00`\01(\00\03\19(\00\04\17\0C\00\00\00\00\00\04\00 \00\00\F5!\00\04\17\0C\00\00\00\00\00\03\00\18\00\00\F5!\00\04\17\0C\00\00\00\00\00\02\00\10\00\00\F5!\00\04\17\0C\00\00\00\00\00\01\00\08\00\00\F0!\00\04\17\0C\00\00\00\00\00\00\00\00\00\00\F0!\00\03\1B\FF\00\04\1C\08\00\80\00\00\00p\01\00\00\04\05\0C\00\80\00\00\00\01\00\00\00\01\00\00\00\00\00\00\00\FF\FF\FF\FF\00\00\00\00\FE\FF\FF\FF\00\00\00\00\FD\FF\FF\FF\00\00\00\00\FC\FF\FF\FFs\00\00\00\00\00\00\00\00\00\00\11%\00\056D\00\00\00\00\00\00\00\02\00\00\00\06\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00$v\01\FF\00\0A\00\00\FF\00\8E\07\00\E4\0F\00\19y\02\00\00\00\00\00\00%\00\00\00(\0E\00\19y\05\00\00\00\00\00\00!\00\00\00b\0E\00%x\02\02\80\00\00\00\FF\00\8E\07\00\CA\1F\00\10z\00\02\00X\00\00\FF\E1\F3\07\00\C8\0F\00\0Cr\00\00\05\00\00\00p@\F0\03\00\E4/\00\10z\00\03\00Y\00\00\FF\E5\FF\00\00\C8\0F\00\0Cr\00\00\FF\00\00\00\00C\F0\03\00\DA\0F\00M\89\00\00\00\00\00\00\00\00\80\03\00\EA\0F\00\12r\05\02\05\00\00\00\FF\FC\8E\07\00\E2\0F\00\B9z\04\00\00F\00\00\00\0A\00\00\00\C6\0F\00\19x\00\05\02\00\00\00\03\02\01\00\00\E2\0F\04$x\06\05\04\00\00\00\FF\00\8E\07\00\CA\0F\00\10z\04\06\00^\00\00\FF\E0\F3\07\00\E4\0F\04\10z\02\06\00\\\00\00\FF\E0\F1\07\00\E4\0F\00\10z\05\00\00_\00\00\FF\E4\FF\00\00\E4\0F\04\10z\03\00\00]\00\00\FF\E4\7F\00\00\C8\0F\00\81y\05\04\04\00\00\00\00\19\1E\0C\00\A8\0E\00\81y\02\02\04\00\00\00\00\19\1E\0C\00\A2\0E\00\10z\06\06\00`\00\00\FF\E0\F1\07\00\C8\0F\00\10z\07\00\00a\00\00\FF\E4\7F\00\00\E2\0F\00$x\09\02\01\00\00\00\05\02\8E\07\00\CAO\00\86y\00\06\09\00\00\00\04\19\10\0C\00\E2\0F\00My\00\00\00\00\00\00\00\00\80\03\00\EA\0F\00Gy\00\00\F0\FF\FF\FF\FF\FF\83\03\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\01\00\00\00\03\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00@\00\00\00\00\00\00\00:\01\00\00\00\00\00\00\00\00\00\00\00\00\00\00\01\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\0B\00\00\00\03\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00z\01\00\00\00\00\00\00Q\01\00\00\00\00\00\00\00\00\00\00\00\00\00\00\01\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\13\00\00\00\02\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\D0\02\00\00\00\00\00\00\A8\00\00\00\00\00\00\00\02\00\00\00\06\00\00\00\08\00\00\00\00\00\00\00\18\00\00\00\00\00\00\00\DF\00\00\00\01\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00x\03\00\00\00\00\00\00p\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\01\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00)\00\00\00\00\00\00p\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\E8\03\00\00\00\00\00\000\00\00\00\00\00\00\00\03\00\00\00\00\00\00\00\04\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00O\00\00\00\00\00\00p@\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\18\04\00\00\00\00\00\00\88\00\00\00\00\00\00\00\03\00\00\00\0B\00\00\00\04\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\0F\01\00\00\01\00\00p\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\A0\04\00\00\00\00\00\00 \00\00\00\00\00\00\00\03\00\00\00\00\00\00\00\04\00\00\00\00\00\00\00\08\00\00\00\00\00\00\00+\01\00\00\0B\00\00p\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\C0\04\00\00\00\00\00\00\10\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\08\00\00\00\00\00\00\00\08\00\00\00\00\00\00\00\EC\00\00\00\09\00\00\00@\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\D0\04\00\00\00\00\00\00\10\00\00\00\00\00\00\00\03\00\00\00\04\00\00\00\08\00\00\00\00\00\00\00\10\00\00\00\00\00\00\00\91\00\00\00\01\00\00\00B\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\E0\04\00\00\00\00\00\00\88\01\00\00\00\00\00\00\00\00\00\00\0B\00\00\00\04\00\00\00\00\00\00\00\00\00\00\00\00\00\00\002\00\00\00\01\00\00\00\06\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\80\06\00\00\00\00\00\00\80\02\00\00\00\00\00\00\03\00\00\00\06\00\00\0C\80\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\06\00\00\00\05\00\00\00\00\0C\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\A8\00\00\00\00\00\00\00\A8\00\00\00\00\00\00\00\08\00\00\00\00\00\00\00\01\00\00\00\05\00\00\00\E0\04\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00 \04\00\00\00\00\00\00 \04\00\00\00\00\00\00\08\00\00\00\00\00\00\00\01\00\00\00\05\00\00\00\00\0C\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\A8\00\00\00\00\00\00\00\A8\00\00\00\00\00\00\00\08\00\00\00\00\00\00\00">]
   llvm.func @main() {
     %0 = llvm.mlir.constant("c\00") : !llvm.array<2 x i8>
     %1 = llvm.mlir.constant("b\00") : !llvm.array<2 x i8>
     %2 = llvm.mlir.constant(1 : i32) : i32
     %3 = llvm.mlir.constant("a\00") : !llvm.array<2 x i8>
     %4 = llvm.mlir.constant(2 : i32) : i32
-    %5 = llvm.mlir.constant(4 : i32) : i32
-    %6 = llvm.mlir.constant(8 : i32) : i32
+    %5 = llvm.mlir.constant(8 : i32) : i32
+    %6 = llvm.mlir.constant(4 : i32) : i32
     %7 = llvm.mlir.constant(4 : i32) : i32
     %8 = llvm.mlir.constant(8 : i32) : i32
     %9 = llvm.mul %7, %8 : i32
@@ -1495,7 +1495,7 @@ module attributes {gpu.container_module} {
     %12 = llvm.call @toy_alloc(%9, %4) : (i32, i32) -> !llvm.ptr
     %13 = llvm.call @toy_random(%10, %9, %4) : (!llvm.ptr, i32, i32) -> !llvm.ptr
     %14 = llvm.call @toy_random(%11, %9, %4) : (!llvm.ptr, i32, i32) -> !llvm.ptr
-    %15 = llvm.call @add_two_vectors(%10, %11, %12, %5, %6) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32) -> !llvm.ptr
+    %15 = llvm.call @add_two_vectors(%10, %11, %12, %6, %5) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32) -> !llvm.ptr
     %16 = llvm.alloca %2 x !llvm.array<2 x i8> : (i32) -> !llvm.ptr
     llvm.store %3, %16 : !llvm.array<2 x i8>, !llvm.ptr
     %17 = llvm.call @toy_print(%10, %9, %4, %16) : (!llvm.ptr, i32, i32, !llvm.ptr) -> i64
@@ -1533,22 +1533,22 @@ module attributes {gpu.container_module} {
     gpu.launch_func  @add_two_vectors_kernel::@add_two_vectors_kernel blocks in (%13, %2, %2) threads in (%1, %2, %2) : i64 args(%5 : i64, %4 : i64, %arg0 : !llvm.ptr, %arg1 : !llvm.ptr, %arg2 : !llvm.ptr)
     llvm.return %arg2 : !llvm.ptr
   }
-  gpu.binary @add_two_vectors_kernel  [#gpu.object<#nvvm.target<chip = "sm_89", features = "+ptx84">, properties = {ISAToBinaryTimeInMs = 10 : i64, LLVMIRToISATimeInMs = 12 : i64}, bin = "\7FELF\02\01\013\07\00\00\00\00\00\00\00\02\00\BE\00|\00\00\00\00\00\00\00\00\00\00\00\00\0C\00\00\00\00\00\00\00\09\00\00\00\00\00\00Y\05Y\00@\008\00\03\00@\00\0C\00\01\00\00.shstrtab\00.strtab\00.symtab\00.symtab_shndx\00.nv.info\00.text.add_two_vectors_kernel\00.nv.info.add_two_vectors_kernel\00.nv.shared.add_two_vectors_kernel\00.nv.constant0.add_two_vectors_kernel\00.rel.nv.constant0.add_two_vectors_kernel\00.debug_frame\00.rel.debug_frame\00.rela.debug_frame\00.nv.callgraph\00.nv.prototype\00.nv.rel.action\00\00.shstrtab\00.strtab\00.symtab\00.symtab_shndx\00.nv.info\00.text.add_two_vectors_kernel\00.nv.info.add_two_vectors_kernel\00.nv.shared.add_two_vectors_kernel\00.rel.nv.constant0.add_two_vectors_kernel\00.nv.constant0.add_two_vectors_kernel\00.debug_frame\00.rel.debug_frame\00.rela.debug_frame\00.nv.callgraph\00.nv.prototype\00.nv.rel.action\00add_two_vectors_kernel\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\002\00\00\00\03\00\0B\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\BA\00\00\00\03\00\0A\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\DF\00\00\00\03\00\04\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\0F\01\00\00\03\00\07\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00+\01\00\00\03\00\08\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00:\01\00\00\12\10\0B\00\00\00\00\00\00\00\00\00\80\02\00\00\00\00\00\00\FF\FF\FF\FF$\00\00\00\00\00\00\00\FF\FF\FF\FF\FF\FF\FF\FF\03\00\04|\FF\FF\FF\FF\0F\0C\81\80\80(\00\08\FF\81\80(\08\81\80\80(\00\00\00\FF\FF\FF\FF4\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\80\02\00\00\00\00\00\00\04\04\00\00\00\04 \00\00\00\0C\81\80\80(\00\048\00\00\00\00\00\00\00\00\00\00\04/\08\00\06\00\00\00\0C\00\00\00\04\12\08\00\06\00\00\00\00\00\00\00\04\11\08\00\06\00\00\00\00\00\00\00\04\12\08\00\06\00\00\00\00\00\00\00\047\04\00|\00\00\00\04\0A\08\00\02\00\00\00`\01(\00\03\19(\00\04\17\0C\00\00\00\00\00\04\00 \00\00\F5!\00\04\17\0C\00\00\00\00\00\03\00\18\00\00\F5!\00\04\17\0C\00\00\00\00\00\02\00\10\00\00\F5!\00\04\17\0C\00\00\00\00\00\01\00\08\00\00\F0!\00\04\17\0C\00\00\00\00\00\00\00\00\00\00\F0!\00\03\1B\FF\00\04\1C\08\00\80\00\00\00p\01\00\00\04\05\0C\00\80\00\00\00\01\00\00\00\01\00\00\00\00\00\00\00\FF\FF\FF\FF\00\00\00\00\FE\FF\FF\FF\00\00\00\00\FD\FF\FF\FF\00\00\00\00\FC\FF\FF\FFs\00\00\00\00\00\00\00\00\00\00\11%\00\056D\00\00\00\00\00\00\00\02\00\00\00\06\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00$v\01\FF\00\0A\00\00\FF\00\8E\07\00\E4\0F\00\19y\02\00\00\00\00\00\00%\00\00\00(\0E\00\19y\05\00\00\00\00\00\00!\00\00\00b\0E\00%x\02\02\80\00\00\00\FF\00\8E\07\00\CA\1F\00\10z\00\02\00X\00\00\FF\E1\F3\07\00\C8\0F\00\0Cr\00\00\05\00\00\00p@\F0\03\00\E4/\00\10z\00\03\00Y\00\00\FF\E5\FF\00\00\C8\0F\00\0Cr\00\00\FF\00\00\00\00C\F0\03\00\DA\0F\00M\89\00\00\00\00\00\00\00\00\80\03\00\EA\0F\00\12r\05\02\05\00\00\00\FF\FC\8E\07\00\E2\0F\00\B9z\04\00\00F\00\00\00\0A\00\00\00\C6\0F\00\19x\00\05\02\00\00\00\03\02\01\00\00\E2\0F\04$x\06\05\04\00\00\00\FF\00\8E\07\00\CA\0F\00\10z\04\06\00^\00\00\FF\E0\F3\07\00\E4\0F\04\10z\02\06\00\\\00\00\FF\E0\F1\07\00\E4\0F\00\10z\05\00\00_\00\00\FF\E4\FF\00\00\E4\0F\04\10z\03\00\00]\00\00\FF\E4\7F\00\00\C8\0F\00\81y\05\04\04\00\00\00\00\19\1E\0C\00\A8\0E\00\81y\02\02\04\00\00\00\00\19\1E\0C\00\A2\0E\00\10z\06\06\00`\00\00\FF\E0\F1\07\00\C8\0F\00\10z\07\00\00a\00\00\FF\E4\7F\00\00\E2\0F\00$x\09\02\01\00\00\00\05\02\8E\07\00\CAO\00\86y\00\06\09\00\00\00\04\19\10\0C\00\E2\0F\00My\00\00\00\00\00\00\00\00\80\03\00\EA\0F\00Gy\00\00\F0\FF\FF\FF\FF\FF\83\03\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\01\00\00\00\03\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00@\00\00\00\00\00\00\00:\01\00\00\00\00\00\00\00\00\00\00\00\00\00\00\01\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\0B\00\00\00\03\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00z\01\00\00\00\00\00\00Q\01\00\00\00\00\00\00\00\00\00\00\00\00\00\00\01\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\13\00\00\00\02\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\D0\02\00\00\00\00\00\00\A8\00\00\00\00\00\00\00\02\00\00\00\06\00\00\00\08\00\00\00\00\00\00\00\18\00\00\00\00\00\00\00\DF\00\00\00\01\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00x\03\00\00\00\00\00\00p\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\01\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00)\00\00\00\00\00\00p\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\E8\03\00\00\00\00\00\000\00\00\00\00\00\00\00\03\00\00\00\00\00\00\00\04\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00O\00\00\00\00\00\00p@\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\18\04\00\00\00\00\00\00\88\00\00\00\00\00\00\00\03\00\00\00\0B\00\00\00\04\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\0F\01\00\00\01\00\00p\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\A0\04\00\00\00\00\00\00 \00\00\00\00\00\00\00\03\00\00\00\00\00\00\00\04\00\00\00\00\00\00\00\08\00\00\00\00\00\00\00+\01\00\00\0B\00\00p\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\C0\04\00\00\00\00\00\00\10\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\08\00\00\00\00\00\00\00\08\00\00\00\00\00\00\00\EC\00\00\00\09\00\00\00@\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\D0\04\00\00\00\00\00\00\10\00\00\00\00\00\00\00\03\00\00\00\04\00\00\00\08\00\00\00\00\00\00\00\10\00\00\00\00\00\00\00\91\00\00\00\01\00\00\00B\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\E0\04\00\00\00\00\00\00\88\01\00\00\00\00\00\00\00\00\00\00\0B\00\00\00\04\00\00\00\00\00\00\00\00\00\00\00\00\00\00\002\00\00\00\01\00\00\00\06\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\80\06\00\00\00\00\00\00\80\02\00\00\00\00\00\00\03\00\00\00\06\00\00\0C\80\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\06\00\00\00\05\00\00\00\00\0C\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\A8\00\00\00\00\00\00\00\A8\00\00\00\00\00\00\00\08\00\00\00\00\00\00\00\01\00\00\00\05\00\00\00\E0\04\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00 \04\00\00\00\00\00\00 \04\00\00\00\00\00\00\08\00\00\00\00\00\00\00\01\00\00\00\05\00\00\00\00\0C\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\A8\00\00\00\00\00\00\00\A8\00\00\00\00\00\00\00\08\00\00\00\00\00\00\00">]
+  gpu.binary @add_two_vectors_kernel  [#gpu.object<#nvvm.target<chip = "sm_89", features = "+ptx84">, properties = {ISAToBinaryTimeInMs = 10 : i64, LLVMIRToISATimeInMs = 13 : i64}, bin = "\7FELF\02\01\013\07\00\00\00\00\00\00\00\02\00\BE\00|\00\00\00\00\00\00\00\00\00\00\00\00\0C\00\00\00\00\00\00\00\09\00\00\00\00\00\00Y\05Y\00@\008\00\03\00@\00\0C\00\01\00\00.shstrtab\00.strtab\00.symtab\00.symtab_shndx\00.nv.info\00.text.add_two_vectors_kernel\00.nv.info.add_two_vectors_kernel\00.nv.shared.add_two_vectors_kernel\00.nv.constant0.add_two_vectors_kernel\00.rel.nv.constant0.add_two_vectors_kernel\00.debug_frame\00.rel.debug_frame\00.rela.debug_frame\00.nv.callgraph\00.nv.prototype\00.nv.rel.action\00\00.shstrtab\00.strtab\00.symtab\00.symtab_shndx\00.nv.info\00.text.add_two_vectors_kernel\00.nv.info.add_two_vectors_kernel\00.nv.shared.add_two_vectors_kernel\00.rel.nv.constant0.add_two_vectors_kernel\00.nv.constant0.add_two_vectors_kernel\00.debug_frame\00.rel.debug_frame\00.rela.debug_frame\00.nv.callgraph\00.nv.prototype\00.nv.rel.action\00add_two_vectors_kernel\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\002\00\00\00\03\00\0B\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\BA\00\00\00\03\00\0A\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\DF\00\00\00\03\00\04\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\0F\01\00\00\03\00\07\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00+\01\00\00\03\00\08\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00:\01\00\00\12\10\0B\00\00\00\00\00\00\00\00\00\80\02\00\00\00\00\00\00\FF\FF\FF\FF$\00\00\00\00\00\00\00\FF\FF\FF\FF\FF\FF\FF\FF\03\00\04|\FF\FF\FF\FF\0F\0C\81\80\80(\00\08\FF\81\80(\08\81\80\80(\00\00\00\FF\FF\FF\FF4\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\80\02\00\00\00\00\00\00\04\04\00\00\00\04 \00\00\00\0C\81\80\80(\00\048\00\00\00\00\00\00\00\00\00\00\04/\08\00\06\00\00\00\0C\00\00\00\04\12\08\00\06\00\00\00\00\00\00\00\04\11\08\00\06\00\00\00\00\00\00\00\04\12\08\00\06\00\00\00\00\00\00\00\047\04\00|\00\00\00\04\0A\08\00\02\00\00\00`\01(\00\03\19(\00\04\17\0C\00\00\00\00\00\04\00 \00\00\F5!\00\04\17\0C\00\00\00\00\00\03\00\18\00\00\F5!\00\04\17\0C\00\00\00\00\00\02\00\10\00\00\F5!\00\04\17\0C\00\00\00\00\00\01\00\08\00\00\F0!\00\04\17\0C\00\00\00\00\00\00\00\00\00\00\F0!\00\03\1B\FF\00\04\1C\08\00\80\00\00\00p\01\00\00\04\05\0C\00\80\00\00\00\01\00\00\00\01\00\00\00\00\00\00\00\FF\FF\FF\FF\00\00\00\00\FE\FF\FF\FF\00\00\00\00\FD\FF\FF\FF\00\00\00\00\FC\FF\FF\FFs\00\00\00\00\00\00\00\00\00\00\11%\00\056D\00\00\00\00\00\00\00\02\00\00\00\06\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00$v\01\FF\00\0A\00\00\FF\00\8E\07\00\E4\0F\00\19y\02\00\00\00\00\00\00%\00\00\00(\0E\00\19y\05\00\00\00\00\00\00!\00\00\00b\0E\00%x\02\02\80\00\00\00\FF\00\8E\07\00\CA\1F\00\10z\00\02\00X\00\00\FF\E1\F3\07\00\C8\0F\00\0Cr\00\00\05\00\00\00p@\F0\03\00\E4/\00\10z\00\03\00Y\00\00\FF\E5\FF\00\00\C8\0F\00\0Cr\00\00\FF\00\00\00\00C\F0\03\00\DA\0F\00M\89\00\00\00\00\00\00\00\00\80\03\00\EA\0F\00\12r\05\02\05\00\00\00\FF\FC\8E\07\00\E2\0F\00\B9z\04\00\00F\00\00\00\0A\00\00\00\C6\0F\00\19x\00\05\02\00\00\00\03\02\01\00\00\E2\0F\04$x\06\05\04\00\00\00\FF\00\8E\07\00\CA\0F\00\10z\04\06\00^\00\00\FF\E0\F3\07\00\E4\0F\04\10z\02\06\00\\\00\00\FF\E0\F1\07\00\E4\0F\00\10z\05\00\00_\00\00\FF\E4\FF\00\00\E4\0F\04\10z\03\00\00]\00\00\FF\E4\7F\00\00\C8\0F\00\81y\05\04\04\00\00\00\00\19\1E\0C\00\A8\0E\00\81y\02\02\04\00\00\00\00\19\1E\0C\00\A2\0E\00\10z\06\06\00`\00\00\FF\E0\F1\07\00\C8\0F\00\10z\07\00\00a\00\00\FF\E4\7F\00\00\E2\0F\00$x\09\02\01\00\00\00\05\02\8E\07\00\CAO\00\86y\00\06\09\00\00\00\04\19\10\0C\00\E2\0F\00My\00\00\00\00\00\00\00\00\80\03\00\EA\0F\00Gy\00\00\F0\FF\FF\FF\FF\FF\83\03\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\18y\00\00\00\00\00\00\00\00\00\00\00\C0\0F\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\01\00\00\00\03\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00@\00\00\00\00\00\00\00:\01\00\00\00\00\00\00\00\00\00\00\00\00\00\00\01\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\0B\00\00\00\03\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00z\01\00\00\00\00\00\00Q\01\00\00\00\00\00\00\00\00\00\00\00\00\00\00\01\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\13\00\00\00\02\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\D0\02\00\00\00\00\00\00\A8\00\00\00\00\00\00\00\02\00\00\00\06\00\00\00\08\00\00\00\00\00\00\00\18\00\00\00\00\00\00\00\DF\00\00\00\01\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00x\03\00\00\00\00\00\00p\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\01\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00)\00\00\00\00\00\00p\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\E8\03\00\00\00\00\00\000\00\00\00\00\00\00\00\03\00\00\00\00\00\00\00\04\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00O\00\00\00\00\00\00p@\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\18\04\00\00\00\00\00\00\88\00\00\00\00\00\00\00\03\00\00\00\0B\00\00\00\04\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\0F\01\00\00\01\00\00p\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\A0\04\00\00\00\00\00\00 \00\00\00\00\00\00\00\03\00\00\00\00\00\00\00\04\00\00\00\00\00\00\00\08\00\00\00\00\00\00\00+\01\00\00\0B\00\00p\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\C0\04\00\00\00\00\00\00\10\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\08\00\00\00\00\00\00\00\08\00\00\00\00\00\00\00\EC\00\00\00\09\00\00\00@\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\D0\04\00\00\00\00\00\00\10\00\00\00\00\00\00\00\03\00\00\00\04\00\00\00\08\00\00\00\00\00\00\00\10\00\00\00\00\00\00\00\91\00\00\00\01\00\00\00B\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\E0\04\00\00\00\00\00\00\88\01\00\00\00\00\00\00\00\00\00\00\0B\00\00\00\04\00\00\00\00\00\00\00\00\00\00\00\00\00\00\002\00\00\00\01\00\00\00\06\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\80\06\00\00\00\00\00\00\80\02\00\00\00\00\00\00\03\00\00\00\06\00\00\0C\80\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\06\00\00\00\05\00\00\00\00\0C\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\A8\00\00\00\00\00\00\00\A8\00\00\00\00\00\00\00\08\00\00\00\00\00\00\00\01\00\00\00\05\00\00\00\E0\04\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00 \04\00\00\00\00\00\00 \04\00\00\00\00\00\00\08\00\00\00\00\00\00\00\01\00\00\00\05\00\00\00\00\0C\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\A8\00\00\00\00\00\00\00\A8\00\00\00\00\00\00\00\08\00\00\00\00\00\00\00">]
   llvm.func @main() {
     %0 = llvm.mlir.constant("c\00") : !llvm.array<2 x i8>
     %1 = llvm.mlir.constant("b\00") : !llvm.array<2 x i8>
     %2 = llvm.mlir.constant(1 : i32) : i32
     %3 = llvm.mlir.constant("a\00") : !llvm.array<2 x i8>
     %4 = llvm.mlir.constant(2 : i32) : i32
-    %5 = llvm.mlir.constant(4 : i32) : i32
-    %6 = llvm.mlir.constant(8 : i32) : i32
-    %7 = llvm.mul %5, %6 : i32
+    %5 = llvm.mlir.constant(8 : i32) : i32
+    %6 = llvm.mlir.constant(4 : i32) : i32
+    %7 = llvm.mul %6, %5 : i32
     %8 = llvm.call @toy_alloc(%7, %4) : (i32, i32) -> !llvm.ptr
     %9 = llvm.call @toy_alloc(%7, %4) : (i32, i32) -> !llvm.ptr
     %10 = llvm.call @toy_alloc(%7, %4) : (i32, i32) -> !llvm.ptr
     %11 = llvm.call @toy_random(%8, %7, %4) : (!llvm.ptr, i32, i32) -> !llvm.ptr
     %12 = llvm.call @toy_random(%9, %7, %4) : (!llvm.ptr, i32, i32) -> !llvm.ptr
-    %13 = llvm.call @add_two_vectors(%8, %9, %10, %5, %6) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32) -> !llvm.ptr
+    %13 = llvm.call @add_two_vectors(%8, %9, %10, %6, %5) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32) -> !llvm.ptr
     %14 = llvm.alloca %2 x !llvm.array<2 x i8> : (i32) -> !llvm.ptr
     llvm.store %3, %14 : !llvm.array<2 x i8>, !llvm.ptr
     %15 = llvm.call @toy_print(%8, %7, %4, %14) : (!llvm.ptr, i32, i32, !llvm.ptr) -> i64

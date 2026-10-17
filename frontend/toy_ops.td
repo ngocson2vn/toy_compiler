@@ -126,7 +126,7 @@ def Toy_PrintOp : Op<Toy_Dialect, "print"> {
 }
 
 // def Toy_ConstantOp : Op<Toy_Dialect, "constant", [Pure, AllTypesMatch<["value", "result"]>]> {
-def Toy_ConstantOp : Op<Toy_Dialect, "constant"> {
+def Toy_ConstantOp : Op<Toy_Dialect, "constant", [Pure]> {
   // Provide a summary and description for this operation. This can be used to
   // auto-generate documentation of the operations within our dialect.
   let summary = "constant";
@@ -166,7 +166,7 @@ def Toy_TieDimsOp : Op<Toy_Dialect, "tie_dims"> {
   let arguments = (ins AnyTypeOf<[I32Tensor, F32Tensor, AnyMemRef]>:$arg, Variadic<Index>:$dims);
   let results = (outs AnyTypeOf<[I32Tensor, F32Tensor, AnyMemRef]>:$result);
 
-  let assemblyFormat = "$arg `,` $dims `:` type($arg) `,` type($dims) attr-dict `->` type($result)";
+  let assemblyFormat = "$arg `,` $dims attr-dict `:` type($arg) `,` type($dims) `->` type($result)";
 
   // let builders = [
   //   // OpBuilder<(ins "Value":$lhs, "Value":$rhs, "int64_t":$size)>,
@@ -186,7 +186,7 @@ def Toy_AddOp : Op<Toy_Dialect, "add"> {
   let arguments = (ins AnyTypeOf<[I32Tensor, F32Tensor]>:$lhs, AnyTypeOf<[I32Tensor, F32Tensor]>:$rhs);
   let results = (outs AnyTypeOf<[I32Tensor, F32Tensor]>:$result);
 
-  let assemblyFormat = "$lhs `,` $rhs `:` type($lhs) `,` type($rhs) attr-dict `->` type($result)";
+  let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($lhs) `,` type($rhs) `->` type($result)";
 
   // let builders = [
   //   // OpBuilder<(ins "Value":$lhs, "Value":$rhs, "int64_t":$size)>,
@@ -196,7 +196,7 @@ def Toy_AddOp : Op<Toy_Dialect, "add"> {
   // ];
 }
 
-def Toy_MaxOp : Op<Toy_Dialect, "max", [AllElementTypesMatch<["lhs", "rhs"]>]> {
+def Toy_MaxOp : Op<Toy_Dialect, "max"> {
   let summary = "Maximum operation for the toy dialect";
   let description = [{
     This operation computes the maximum of two tensors element-wise.
@@ -204,7 +204,7 @@ def Toy_MaxOp : Op<Toy_Dialect, "max", [AllElementTypesMatch<["lhs", "rhs"]>]> {
   let arguments = (ins AnyTypeOf<[I32Tensor, F32Tensor]>:$lhs, AnyTypeOf<[I32Tensor, F32Tensor, I32, F32]>:$rhs);
   let results = (outs AnyTypeOf<[I32Tensor, F32Tensor]>:$result);
 
-  let assemblyFormat = "$lhs `,` $rhs `:` type($lhs) `,` type($rhs) attr-dict `->` type($result)";
+  let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($lhs) `,` type($rhs) `->` type($result)";
 
   // let builders = [
   //   // OpBuilder<(ins "Value":$lhs, "Value":$rhs, "int64_t":$size)>,
@@ -222,7 +222,7 @@ def Toy_AllocOp : Op<Toy_Dialect, "alloc"> {
   let arguments = (ins Variadic<Index>:$dims);
   let results = (outs AnyTypeOf<[I32Tensor, F32Tensor, AnyMemRef]>:$result);
 
-  let assemblyFormat = "$dims `:` attr-dict `->` type($result)";
+  let assemblyFormat = "$dims attr-dict `:` type($result)";
 
   // // Provide extra utility definitions on the c++ operation class definition.
   // let extraClassDeclaration = [{
@@ -245,7 +245,7 @@ def Toy_RandomOp : Op<Toy_Dialect, "random"> {
   let arguments = (ins AnyTypeOf<[I32Tensor, F32Tensor, AnyMemRef]>:$arg);
   let results = (outs AnyTypeOf<[I32Tensor, F32Tensor, AnyMemRef]>:$result);
 
-  let assemblyFormat = "$arg `:` type($arg) attr-dict `->` type($result)";
+  let assemblyFormat = "$arg attr-dict `:` type($arg) `->` type($result)";
 }
 
 def Toy_StoreOp : Op<Toy_Dialect, "store"> {
@@ -253,10 +253,10 @@ def Toy_StoreOp : Op<Toy_Dialect, "store"> {
   let description = [{
     This operation store source tensor into destination tensor.
   }];
-  let arguments = (ins AnyTypeOf<[I32Tensor, F32Tensor]>:$src, AnyTypeOf<[I32Tensor, F32Tensor]>:$dst);
-  let results = (outs AnyTypeOf<[I32Tensor, F32Tensor]>:$result);
+  let arguments = (ins AnyTypeOf<[I32Tensor, F32Tensor, AnyMemRef]>:$src, AnyTypeOf<[I32Tensor, F32Tensor, AnyMemRef]>:$dst);
+  let results = (outs AnyTypeOf<[I32Tensor, F32Tensor, AnyMemRef]>:$result);
 
-  let assemblyFormat = "$src `,` $dst `:` type($src) `,` type($dst) attr-dict `->` type($result)";
+  let assemblyFormat = "$src `,` $dst attr-dict `:` type($src) `,` type($dst) `->` type($result)";
 }
 
 

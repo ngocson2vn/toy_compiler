@@ -149,7 +149,8 @@ struct LowerMemRefToLLVMLoadOpPattern : public OpConversionPattern<memref::LoadO
     auto memref = loadOp.getMemRef();
     auto memrefType = cast<MemRefType>(memref.getType());
     auto tieOp = memref.getDefiningOp<mlir::toy::TieDimsOp>();
-    if (!tieOp && !memrefType.hasStaticShape()) {
+    auto allocOp = memref.getDefiningOp<mlir::toy::AllocOp>();
+    if (!tieOp && !allocOp && !memrefType.hasStaticShape()) {
       emitError(loc, "invalid argument: ") << memref;
       std::exit(1);
     }
@@ -160,8 +161,10 @@ struct LowerMemRefToLLVMLoadOpPattern : public OpConversionPattern<memref::LoadO
         Value dimVal = rewriter.create<LLVM::ConstantOp>(loc, rewriter.getI64Type(), dim);
         dims.push_back(dimVal);
       }
-    } else {
+    } else if (!!tieOp) {
       dims = tieOp.getDims();
+    } else {
+      dims = allocOp.getDims();
     }
 
     auto rdims = llvm::reverse(dims);
@@ -210,7 +213,8 @@ struct LowerMemRefToLLVMStoreOpPattern : public OpConversionPattern<memref::Stor
     auto memref = storeOp.getMemRef();
     auto memrefType = cast<MemRefType>(memref.getType());
     auto tieOp = memref.getDefiningOp<mlir::toy::TieDimsOp>();
-    if (!tieOp && !memrefType.hasStaticShape()) {
+    auto allocOp = memref.getDefiningOp<mlir::toy::AllocOp>();
+    if (!tieOp && !allocOp && !memrefType.hasStaticShape()) {
       emitError(loc, "invalid argument: ") << memref;
       std::exit(1);
     }
@@ -221,8 +225,10 @@ struct LowerMemRefToLLVMStoreOpPattern : public OpConversionPattern<memref::Stor
         Value dimVal = rewriter.create<LLVM::ConstantOp>(loc, rewriter.getI64Type(), dim);
         dims.push_back(dimVal);
       }
-    } else {
+    } else if (!!tieOp) {
       dims = tieOp.getDims();
+    } else {
+      dims = allocOp.getDims();
     }
 
     auto rdims = llvm::reverse(dims);

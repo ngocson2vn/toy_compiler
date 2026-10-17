@@ -1,0 +1,21 @@
+def relu(a: tensor<mxkxf32>, b: tensor<kxnxf32>, c: tensor<mxnxf32>, m: int, n: int, k: int) {
+  var tmp = dot(a, b);
+  c = max(tmp, 0);
+}
+
+def main() {
+  var m : int = 3;
+  var n : int = 4;
+  var k : int = 5;
+  var a : tensor<mxkxf32>;
+  var b : tensor<kxnxf32>;
+  var c : tensor<mxnxf32>;
+
+  random(a);
+  random(b);
+  relu(a, b, c, m, n, k);
+
+  # print(a);
+  # print(b);
+  print(c);
+}

@@ -238,6 +238,9 @@ struct ToyMaxOpConverter : public OpConversionPattern<toy::MaxOp> {
         if (elemType.isF32() || elemType.isF16()) {
           result = nestedBuilder.create<arith::MaximumFOp>(loc, args[0], y);
         } else if (elemType.isInteger()) {
+          if (y.getType() != elemType) {
+            y = nestedBuilder.create<arith::FPToSIOp>(loc, elemType, y);
+          }
           result = nestedBuilder.create<arith::MaxSIOp>(loc, args[0], y);
         } else {
           llvm_unreachable("Unsupported type");
@@ -359,20 +362,20 @@ struct ToyStoreOpConverter : public OpConversionPattern<toy::StoreOp> {
     auto dst = op.getDst();
 
 
-    SmallVector<Value, 1> newOuts = {dst};
-    auto genericOp = src.getDefiningOp<linalg::GenericOp>();
-    if (!!genericOp && genericOp.getNumDpsInits() == 1) {
-      auto newGenericOp = rewriter.clone(*genericOp);
-      newGenericOp->setOperands(
-        genericOp.getNumDpsInputs(),
-        genericOp.getNumDpsInits(),
-        newOuts
-      );
+    // SmallVector<Value, 1> newOuts = {dst};
+    // auto genericOp = src.getDefiningOp<linalg::GenericOp>();
+    // if (!!genericOp && genericOp.getNumDpsInits() == 1) {
+    //   auto newGenericOp = rewriter.clone(*genericOp);
+    //   newGenericOp->setOperands(
+    //     genericOp.getNumDpsInputs(),
+    //     genericOp.getNumDpsInits(),
+    //     newOuts
+    //   );
 
-      auto ret = rewriter.create<bufferization::MaterializeInDestinationOp>(op.getLoc(), newGenericOp->getResult(0), dst);
-      rewriter.replaceOp(op, ret);
-      return success();
-    }
+    //   auto ret = rewriter.create<bufferization::MaterializeInDestinationOp>(op.getLoc(), newGenericOp->getResult(0), dst);
+    //   rewriter.replaceOp(op, ret);
+    //   return success();
+    // }
 
     LLVM_DEBUG(llvm::dbgs() << "src op: " << *src.getDefiningOp() << "\n");
 
@@ -662,10 +665,23 @@ struct TensorEmptyOpMemRefConverter : public OpConversionPattern<tensor::EmptyOp
       tensor::EmptyOp op, OpAdaptor adaptor,
       ConversionPatternRewriter &rewriter) const override {
     auto memrefType = getTypeConverter()->convertType<MemRefType>(op.getType());
-    auto newOp = rewriter.create<memref::AllocaOp>(
+    auto dynamicSizes = adaptor.getDynamicSizes();
+    SmallVector<Value> dims;
+    for (int i = 0; i < memrefType.getRank(); i++) {
+      if (memrefType.isDynamicDim(i)) {
+        dims.push_back(dynamicSizes[i]);
+      } else {
+        Value dimVal = rewriter.create<arith::ConstantIndexOp>(
+                                  op.getLoc(), memrefType.getDimSize(i));
+        dims.push_back(dimVal);
+        
+      }
+    }
+
+    auto newOp = rewriter.create<toy::AllocOp>(
       op.getLoc(),
       memrefType,
-      adaptor.getDynamicSizes()
+      dims
     );
 
     rewriter.replaceOp(op, newOp);

@@ -20,6 +20,7 @@ add_dependencies(middleend
   MLIRLinalgTransforms
   MLIRGPUTransforms
   MLIRSCFToControlFlow
+  MLIRSCFTransforms
   MLIRParser
   MLIRSupport
   MLIRTableGen

@@ -110,6 +110,29 @@ struct TieDimsBufferizableModel
   }
 };
 
+struct AllocBufferizableModel
+  : public bufferization::BufferizableOpInterface::ExternalModel<AllocBufferizableModel, toy::AllocOp> {
+  bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
+                              const AnalysisState &state) const {
+    return false;
+  }
+
+  bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
+                               const AnalysisState &state) const {
+    return false;
+  }
+
+  AliasingValueList getAliasingValues(Operation *op, OpOperand &opOperand,
+                                      const AnalysisState &state) const {
+    return {{op->getResult(0), BufferRelation::Equivalent}};
+  }
+
+  bool isWritable(Operation *op, Value value,
+                  const bufferization::AnalysisState &state) const {
+    return isa<OpResult>(value);  // the result is a view of a writable buffer
+  }
+};
+
 }
 
 namespace mlir {
@@ -195,6 +218,7 @@ LogicalResult DotOp::inferReturnTypes(
 void registerBufferizableOpInterfaceExternalModels(DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, ToyDialect *dialect) {
     TieDimsOp::attachInterface<TieDimsBufferizableModel>(*ctx);
+    AllocOp::attachInterface<AllocBufferizableModel>(*ctx);
   });
 }
 

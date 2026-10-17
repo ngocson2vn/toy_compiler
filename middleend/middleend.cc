@@ -16,6 +16,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 #include "mlir/Dialect/Bufferization/Transforms/FuncBufferizableOpInterfaceImpl.h"
+#include "mlir/Dialect/SCF/Transforms/Passes.h"
 
 // MLIR Passes
 #include "mlir/Pass/PassManager.h"
@@ -113,10 +114,10 @@ LogicalResult lower(mlir::ModuleOp& module) {
   pm.addPass(mlir::createCanonicalizerPass());
   pm.addPass(mlir::createCSEPass());
 
-  // // Fold toy::TieDimsOp ops
-  // pm.addPass(mlir::toy::createFoldTieDimsOpPass());
-  // pm.addPass(mlir::createCanonicalizerPass());
-  // pm.addPass(mlir::createCSEPass());
+  // Merge Loops
+  pm.addPass(mlir::createParallelLoopFusionPass());
+  pm.addPass(mlir::createCanonicalizerPass());
+  pm.addPass(mlir::createCSEPass());
 
   // Apply the pass
   if (failed(pm.run(module))) {
