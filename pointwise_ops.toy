@@ -1,6 +1,7 @@
-def add_max_vectors(a: tensor<d0xd1xf32>, b: tensor<d0xd1xf32>, out: tensor<d0xd1xf32>, d0: int, d1: int) {
+def gpu_compute(a: tensor<d0xd1xf32>, b: tensor<d0xd1xf32>, c: tensor<d0xd1xf32>, d0: int, d1: int) {
   var tmp0 = add(a, b);
-  out = max(tmp0, 0.15);
+  var tmp1 = mul(tmp0, a);
+  c = max(tmp1, 0);
 }
 
 #
@@ -11,13 +12,13 @@ def main() {
   var d1 : int = 64;
   var a : tensor<d0xd1xf32>;
   var b : tensor<d0xd1xf32>;
-  var out : tensor<d0xd1xf32>;
+  var c : tensor<d0xd1xf32>;
 
   random(a);
   random(b);
-  add_max_vectors(a, b, out, d0, d1);
+  gpu_compute(a, b, c, d0, d1);
 
   # print(a);
   # print(b);
-  print(out);
+  print(c);
 }

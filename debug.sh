@@ -2,13 +2,8 @@
 
 set -e
 
-export TOY_DUMP_LLVMIR=true
-
 # Required
 export CUDA_ROOT=/usr/local/cuda-12.4
-
-# Remove old object file if it exists
-rm -fv ${OBJECT_FILE}
 
 # Compile source file to an object file with embedded CUBIN
 # - arg0: the path to a .toy source file
@@ -16,4 +11,4 @@ rm -fv ${OBJECT_FILE}
 # ./output/bin/compiler -debug ./add_two_vectors.toy sm_86
 # ./output/bin/compiler ./add_two_vectors.toy sm_86
 
-./output/bin/compiler ./add_two_vectors_f32.toy #--debug
+./output/bin/compiler ./pointwise_ops.toy #--debug

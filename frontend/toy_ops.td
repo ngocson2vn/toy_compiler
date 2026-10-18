@@ -196,6 +196,17 @@ def Toy_AddOp : Op<Toy_Dialect, "add"> {
   // ];
 }
 
+def Toy_MulOp : Op<Toy_Dialect, "mul"> {
+  let summary = "Multiplication operation for the toy dialect";
+  let description = [{
+    This operation computes the Hadamard product of two tensors.
+  }];
+  let arguments = (ins AnyTypeOf<[I32Tensor, F32Tensor]>:$lhs, AnyTypeOf<[I32Tensor, F32Tensor, I32, F32]>:$rhs);
+  let results = (outs AnyTypeOf<[I32Tensor, F32Tensor]>:$result);
+
+  let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($lhs) `,` type($rhs) `->` type($result)";
+}
+
 def Toy_MaxOp : Op<Toy_Dialect, "max"> {
   let summary = "Maximum operation for the toy dialect";
   let description = [{

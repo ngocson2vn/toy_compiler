@@ -433,8 +433,8 @@ private:
   /// random(t).
   mlir::Value mlirGen(RandomExprAST &call) {
     const auto& args = call.getArgs();
-    auto& arg0 = *args[0];
-    if (arg0.getKind() != ExprAST::Expr_Var) {
+    auto& arg0 = *args.front();
+    if (arg0.getKind() != ExprKind::Expr_Var) {
       return nullptr;
     } 
 
@@ -479,7 +479,7 @@ private:
 
 
   /// Emit a add expression. It emits specific operations for builtin:
-  /// add(x, y, n).
+  /// add(x, y).
   mlir::Value mlirGen(AddExprAST &call) {
     SmallVector<mlir::Value> argVals;
     for (auto& arg : call.getArgs()) {
@@ -491,6 +491,22 @@ private:
     }
 
     auto v = builder.create<mlir::toy::AddOp>(loc(call.loc()), mlir::TypeRange{argVals[0].getType()}, argVals);
+    return v;
+  }
+
+  /// Emit a add expression. It emits specific operations for builtin:
+  /// mul(x, y).
+  mlir::Value mlirGen(MulExprAST &call) {
+    SmallVector<mlir::Value> argVals;
+    for (auto& arg : call.getArgs()) {
+      auto val = mlirGen(*arg);
+      if (!val)
+        return nullptr;
+
+      argVals.push_back(val);
+    }
+
+    auto v = builder.create<mlir::toy::MulOp>(loc(call.loc()), mlir::TypeRange{argVals[0].getType()}, argVals);
     return v;
   }
 
@@ -594,11 +610,11 @@ private:
 
     if (!!init) {
       mlir::Value value;
-      if (init->getKind() != ExprAST::Expr_Num) {
+      if (init->getKind() != ExprKind::Expr_Num) {
         value = mlirGen(*init);
       } else {
         // init is a NumberExprAST
-        auto numExpr = cast<NumberExprAST>(*init);
+        auto& numExpr = cast<NumberExprAST>(*init);
         numExpr.setType(varType.type);
         value = mlirGen(numExpr);
       }
@@ -696,37 +712,39 @@ private:
   /// Dispatch codegen for the right expression subclass using RTTI.
   mlir::Value mlirGen(ExprAST &expr) {
     switch (expr.getKind()) {
-    case ExprAST::Expr_Var:
+    case ExprKind::Expr_Var:
       return mlirGen(cast<VariableExprAST>(expr));
-    case ExprAST::Expr_Literal:
+    case ExprKind::Expr_Literal:
       return mlirGen(cast<LiteralExprAST>(expr));
-    case ExprAST::Expr_Num:
+    case ExprKind::Expr_Num:
       return mlirGen(cast<NumberExprAST>(expr));
-    case ExprAST::Expr_AssignOp:
+    case ExprKind::Expr_AssignOp:
       return mlirGen(cast<AssignExprAST>(expr));
-    case ExprAST::Expr_BinOp:
+    case ExprKind::Expr_BinOp:
       return mlirGen(cast<BinaryExprAST>(expr));
     
     // Host ops
-    case ExprAST::Expr_Random:
+    case ExprKind::Expr_Random:
       return mlirGen(cast<RandomExprAST>(expr));
-    case ExprAST::Expr_Call:
+    case ExprKind::Expr_Call:
       return mlirGen(cast<CallExprAST>(expr));
-    case ExprAST::Expr_Print:
+    case ExprKind::Expr_Print:
       return mlirGen(cast<PrintExprAST>(expr));
 
     // Device ops
-    case ExprAST::Expr_Add:
+    case ExprKind::Expr_Add:
       return mlirGen(cast<AddExprAST>(expr));
-    case ExprAST::Expr_Max:
+    case ExprKind::Expr_Mul:
+      return mlirGen(cast<MulExprAST>(expr));
+    case ExprKind::Expr_Max:
       return mlirGen(cast<MaxExprAST>(expr));
-    case ExprAST::Expr_Dot:
+    case ExprKind::Expr_Dot:
       return mlirGen(cast<DotExprAST>(expr));
 
     default:
       emitError(loc(expr.loc()))
           << "MLIR codegen encountered an unhandled expr kind '"
-          << Twine(expr.getKind()) << "'";
+          << expr.getKind() << "'";
       return nullptr;
     }
   }

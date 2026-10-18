@@ -170,6 +170,81 @@ struct ToyAddOpConverter : public OpConversionPattern<toy::AddOp> {
   }
 };
 
+struct ToyMulOpConverter : public OpConversionPattern<toy::MulOp> {
+  using OpConversionPattern<toy::MulOp>::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(
+      toy::MulOp op, OpAdaptor adaptor,
+      ConversionPatternRewriter &rewriter) const override {
+
+    auto parentOp = op->getParentOp();
+    LLVM_DEBUG(llvm::dbgs() << "\nBegin ToyMulOpConverter:\n" << *parentOp << "\n\n");
+
+    auto x = op.getLhs();
+    auto y = op.getRhs();
+
+    auto out = op.getResult();
+    auto resultType = cast<RankedTensorType>(out.getType());
+    auto elemType = resultType.getElementType();
+    int64_t rank = resultType.getRank();
+
+    // Create output tensor
+    SmallVector<Value> dynamicSizes;
+    auto resultShape = resultType.getShape();
+    for (int i = 0; i < rank; i++) {
+      if (resultShape[i] == ShapedType::kDynamic) {
+        Value idx = rewriter.create<arith::ConstantIndexOp>(op.getLoc(), i);
+        Value dim = rewriter.create<tensor::DimOp>(op.getLoc(), x, idx);
+        dynamicSizes.push_back(dim);
+      }
+    }
+    Value outTensor = rewriter.create<tensor::EmptyOp>(op.getLoc(), resultType, dynamicSizes);
+
+    // Indexing maps: identity for x and output, empty or identity for y.
+    SmallVector<AffineExpr> exprs;
+    for (int64_t i = 0; i < rank; ++i) {
+      exprs.push_back(rewriter.getAffineDimExpr(i));
+    }
+    auto xIndexMap = AffineMap::get(rank, 0, exprs, rewriter.getContext());
+    auto yIndexMap = xIndexMap;
+    auto outputIndexMap = xIndexMap;
+    SmallVector<AffineMap> indexingMaps = {xIndexMap, yIndexMap, outputIndexMap};
+
+    // Set iterator types: all parallel for element-wise operation.
+    SmallVector<utils::IteratorType> iteratorTypes(rank, utils::IteratorType::parallel);
+
+    // Create linalg.generic operation with memref semantics.
+    auto linalgOp = rewriter.create<linalg::GenericOp>(
+      op.getLoc(),
+      /*resultTypes=*/TypeRange{resultType},
+      /*inputs=*/ValueRange{x, y},
+      /*outputs=*/ValueRange{outTensor},
+      /*indexingMaps=*/indexingMaps,
+      /*iteratorTypes=*/iteratorTypes,
+      [&](OpBuilder &nestedBuilder, Location loc, ValueRange args) {
+        Value xVal = args[0];
+        Value yVal = args[1];
+        Value result;
+        if (elemType.isF32() || elemType.isF16()) {
+          result = nestedBuilder.create<arith::MulFOp>(loc, xVal, yVal);
+        } else if (elemType.isInteger()) {
+          result = nestedBuilder.create<arith::MulIOp>(loc, xVal, yVal);
+        } else {
+          llvm_unreachable("Unsupported type");
+        }
+        // nestedBuilder.create<linalg::YieldOp>(loc);
+        nestedBuilder.create<linalg::YieldOp>(loc, result);
+      }
+    );
+
+    rewriter.replaceOp(op, linalgOp);
+
+    LLVM_DEBUG(llvm::dbgs() << "\nAfter ToyMulOpConverter:\n" << *parentOp << "\n");
+
+    return success();
+  }
+};
+
 struct ToyMaxOpConverter : public OpConversionPattern<toy::MaxOp> {
   using OpConversionPattern<toy::MaxOp>::OpConversionPattern;
 
@@ -434,6 +509,7 @@ struct ConvertToyToLinalgPass : public toy::impl::ConvertToyToLinalgPassBase<Con
 
     target.addIllegalOp<
       toy::AddOp,
+      toy::MulOp,
       toy::MaxOp,
       toy::DotOp,
       toy::StoreOp
@@ -443,6 +519,7 @@ struct ConvertToyToLinalgPass : public toy::impl::ConvertToyToLinalgPassBase<Con
     RewritePatternSet patterns(&getContext());
     patterns.add<
       ToyAddOpConverter,
+      ToyMulOpConverter,
       ToyMaxOpConverter,
       ToyDotOpConverter,
       ToyStoreOpConverter

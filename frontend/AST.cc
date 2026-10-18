@@ -315,6 +315,18 @@ namespace toy {
 namespace compiler {
 namespace frontend {
 
+mlir::Diagnostic& operator<<(mlir::Diagnostic& diag, const ExprKind kind) {
+  diag << kKindNames[static_cast<std::size_t>(kind)];
+
+  return diag;
+}
+
+llvm::raw_ostream& operator<<(llvm::raw_ostream& os, const ExprKind kind) {
+  os << kKindNames[static_cast<std::size_t>(kind)];
+
+  return os;
+}
+
 // Public API
 void dumpAST(ModuleAST &module) { ASTDumper().dump(&module); }
 

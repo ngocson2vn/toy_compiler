@@ -38,47 +38,43 @@ namespace frontend {
 /// succeeds.
 class Parser {
 public:
+  using ASTBuilderType = std::unique_ptr<UniformExprAST> (*)(
+                              Parser*,
+                              const std::string&,
+                              const ExprKind,
+                              Location&,
+                              std::vector<std::unique_ptr<ExprAST>>&);
+  struct ExprContext {
+    ExprKind kind;
+    ASTBuilderType builder;
+  };
+
   /// Create a Parser for the supplied lexer.
   Parser(Lexer &lexer) : lexer(lexer) {
-    opFunctions["print"] = [this](Location& loc, std::vector<std::unique_ptr<ExprAST>>& args) 
-                              -> std::unique_ptr<ExprAST> {
-      if (args.size() != 1)
-        return parseError<ExprAST>("<single arg>", "as argument to print()");
+    // Unary ops
+    exprs["print"] = {ExprKind::Expr_Print, unaryExprBuilder};
+    exprs["random"] = {ExprKind::Expr_Random, unaryExprBuilder};
 
-      return std::make_unique<PrintExprAST>(std::move(loc), std::move(args[0]));
-    };
+    // Binary ops
+    exprs["add"] = {ExprKind::Expr_Add, binaryExprBuilder};
+    exprs["mul"] = {ExprKind::Expr_Mul, binaryExprBuilder};
+    exprs["max"] = {ExprKind::Expr_Max, binaryExprBuilder};
+    exprs["dot"] = {ExprKind::Expr_Dot, binaryExprBuilder};
+  }
 
-    opFunctions["add"] = [this](Location& loc, std::vector<std::unique_ptr<ExprAST>>& args) 
-                              -> std::unique_ptr<ExprAST> {
-      if (args.size() != 2)
-        return parseError<ExprAST>("<2 args>", "as arguments to add()");
-
-      return std::make_unique<AddExprAST>(std::move(loc), std::move(args));
-    };
-
-    opFunctions["max"] = [this](Location& loc, std::vector<std::unique_ptr<ExprAST>>& args) 
-                              -> std::unique_ptr<ExprAST> {
-      if (args.size() != 2)
-        return parseError<ExprAST>("<2 args>", "as arguments to max()");
-      
-      return std::make_unique<MaxExprAST>(std::move(loc), std::move(args));
-    };
-
-    opFunctions["dot"] = [this](Location& loc, std::vector<std::unique_ptr<ExprAST>>& args) 
-                              -> std::unique_ptr<ExprAST> {
-      if (args.size() != 2)
-        return parseError<ExprAST>("<2 args>", "as arguments to dot()");
-
-      return std::make_unique<DotExprAST>(std::move(loc), std::move(args));
-    };
-
-    opFunctions["random"] = [this](Location& loc, std::vector<std::unique_ptr<ExprAST>>& args) 
-                              -> std::unique_ptr<ExprAST> {
-      if (args.size() != 1)
-        return parseError<ExprAST>("<1 args>", "as arguments to random()");
-      
-      return std::make_unique<RandomExprAST>(std::move(loc), std::move(args));
-    };
+  /// Helper function to signal errors while parsing, it takes an argument
+  /// indicating the expected token and another argument giving more context.
+  /// Location is retrieved from the lexer to enrich the error message.
+  template <typename R, typename T, typename U = const char *>
+  std::unique_ptr<R> parseError(T &&expected, U &&context = "") {
+    auto curToken = lexer.getCurToken();
+    llvm::errs() << "Parse error (" << lexer.getLastLocation().line << ", "
+                 << lexer.getLastLocation().col << "): expected '" << expected
+                 << "' " << context << " but has Token " << curToken;
+    if (isprint(curToken))
+      llvm::errs() << " '" << (char)curToken << "'";
+    llvm::errs() << "\n";
+    return nullptr;
   }
 
   /// Parse a full Module. A module is a list of function definitions.
@@ -101,8 +97,8 @@ public:
 
 private:
   Lexer &lexer;
-  using OpFn = std::function<std::unique_ptr<ExprAST>(Location&, std::vector<std::unique_ptr<ExprAST>>&)>;
-  std::unordered_map<std::string, OpFn> opFunctions;
+  std::unordered_map<std::string, ExprContext> exprs;
+
 
   /// Parse a return statement.
   /// return :== return ; | return expr ;
@@ -256,8 +252,9 @@ private:
     lexer.consume(Token(')'));
 
     // It can be a builtin call to print
-    if (opFunctions.count(name)) {
-      return opFunctions[name](loc, args);
+    if (exprs.count(name)) {
+      auto& ctx = exprs[name];
+      return (ctx.builder)(this, name, ctx.kind, loc, args);
     }
 
     // Call to a user-defined function
@@ -613,20 +610,35 @@ private:
     }
   }
 
-  /// Helper function to signal errors while parsing, it takes an argument
-  /// indicating the expected token and another argument giving more context.
-  /// Location is retrieved from the lexer to enrich the error message.
-  template <typename R, typename T, typename U = const char *>
-  std::unique_ptr<R> parseError(T &&expected, U &&context = "") {
-    auto curToken = lexer.getCurToken();
-    llvm::errs() << "Parse error (" << lexer.getLastLocation().line << ", "
-                 << lexer.getLastLocation().col << "): expected '" << expected
-                 << "' " << context << " but has Token " << curToken;
-    if (isprint(curToken))
-      llvm::errs() << " '" << (char)curToken << "'";
-    llvm::errs() << "\n";
-    return nullptr;
-  }
+  static std::unique_ptr<UniformExprAST> unaryExprBuilder(
+    Parser* self,
+    const std::string& opName,
+    const ExprKind kind,
+    Location& loc,
+    std::vector<std::unique_ptr<ExprAST>>& args) {
+    if (args.size() != 1) {
+      return self->parseError<UniformExprAST>(
+        "<1 arg>", std::string("to op ").append(opName)
+      );
+    }
+
+    return std::make_unique<UniformExprAST>(kind, std::move(loc), std::move(args));
+  };
+
+  static std::unique_ptr<UniformExprAST> binaryExprBuilder(
+    Parser* self,
+    const std::string& opName,
+    const ExprKind kind,
+    Location& loc,
+    std::vector<std::unique_ptr<ExprAST>>& args) {
+    if (args.size() != 2) {
+      return self->parseError<UniformExprAST>(
+        "<2 args>", std::string("to op ").append(opName)
+      );
+    }
+
+    return std::make_unique<UniformExprAST>(kind, std::move(loc), std::move(args));
+  };
 };
 
 } // namespace frontend
