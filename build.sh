@@ -49,6 +49,13 @@ echo
 echo "==================================================="
 echo "3. Build toy compiler"
 echo "==================================================="
+
+if [ ! -d ${CUDA_ROOT} ]; then
+  echo "CUDA_ROOT does not exist!"
+  echo "Please export a correct CUDA_ROOT. For example,"
+  echo "export CUDA_ROOT=/usr/local/cuda-12.4"
+fi
+
 mkdir -p ${ROOT_DIR}/build
 
 cmake -G Ninja -S . -B build \

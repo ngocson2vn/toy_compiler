@@ -187,6 +187,10 @@ class ExprAST {
 
   virtual ~ExprAST() = default;
 
+  // Disable all copy operators
+  ExprAST(const ExprAST& other) = delete;
+  ExprAST& operator==(const ExprAST& other) = delete;
+
   ExprKind getKind() const { return kind; }
 
   const Location &loc() { return location; }

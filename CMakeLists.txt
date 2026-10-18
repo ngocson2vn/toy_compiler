@@ -3,6 +3,8 @@ project(ToyLowering)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-command-line-argument -Wno-unknown-warning-option -Wno-deprecated-declarations -Wno-c2y-extensions -Wno-c2y-extensions")
 
+message(STATUS "CUDA_ROOT: ${CUDA_ROOT}")
+
 #============================================================================
 # MLIR and LLVM
 #============================================================================
