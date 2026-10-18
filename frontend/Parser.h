@@ -38,7 +38,7 @@ namespace frontend {
 /// succeeds.
 class Parser {
 public:
-  using ASTBuilderType = std::unique_ptr<UniformExprAST> (*)(
+  using ASTBuilderType = std::unique_ptr<ExprAST> (*)(
                               Parser*,
                               const std::string&,
                               const ExprKind,
@@ -610,34 +610,34 @@ private:
     }
   }
 
-  static std::unique_ptr<UniformExprAST> unaryExprBuilder(
+  static std::unique_ptr<ExprAST> unaryExprBuilder(
     Parser* self,
     const std::string& opName,
     const ExprKind kind,
     Location& loc,
     std::vector<std::unique_ptr<ExprAST>>& args) {
     if (args.size() != 1) {
-      return self->parseError<UniformExprAST>(
+      return self->parseError<ExprAST>(
         "<1 arg>", std::string("to op ").append(opName)
       );
     }
 
-    return std::make_unique<UniformExprAST>(kind, std::move(loc), std::move(args));
+    return std::make_unique<ExprAST>(kind, std::move(loc), std::move(args));
   };
 
-  static std::unique_ptr<UniformExprAST> binaryExprBuilder(
+  static std::unique_ptr<ExprAST> binaryExprBuilder(
     Parser* self,
     const std::string& opName,
     const ExprKind kind,
     Location& loc,
     std::vector<std::unique_ptr<ExprAST>>& args) {
     if (args.size() != 2) {
-      return self->parseError<UniformExprAST>(
+      return self->parseError<ExprAST>(
         "<2 args>", std::string("to op ").append(opName)
       );
     }
 
-    return std::make_unique<UniformExprAST>(kind, std::move(loc), std::move(args));
+    return std::make_unique<ExprAST>(kind, std::move(loc), std::move(args));
   };
 };
 

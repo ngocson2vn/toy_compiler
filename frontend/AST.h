@@ -179,38 +179,23 @@ llvm::raw_ostream& operator<<(llvm::raw_ostream& os, const ExprKind kind);
 
 class ExprAST {
  public:
-  ExprAST() = default;
-  ExprAST(ExprKind kind, Location location)
-    : kind(kind), location(std::move(location)) {};
+  ExprAST(
+    ExprKind kind,
+    Location location,
+    std::vector<std::unique_ptr<ExprAST>> args)
+    : kind(kind), location(std::move(location)), args(std::move(args)) {};
+
   virtual ~ExprAST() = default;
 
   ExprKind getKind() const { return kind; }
 
   const Location &loc() { return location; }
 
+  llvm::ArrayRef<std::unique_ptr<ExprAST>> getArgs() { return args; }
+
  private:
   ExprKind kind;
   Location location;
-};
-
-class UniformExprAST : public ExprAST {
- public:
-  UniformExprAST(ExprKind kind,
-                 Location location,
-                 std::vector<std::unique_ptr<ExprAST>> args)
-      : ExprAST(kind, std::move(location)), args(std::move(args)) {}
-
-  // Disable all copy operators
-  UniformExprAST(const UniformExprAST& other) = delete;
-  UniformExprAST& operator==(const UniformExprAST& other) = delete;
-
-  llvm::ArrayRef<std::unique_ptr<ExprAST>> getArgs() { return args; }
-
-  operator bool() {
-    return this != nullptr;
-  }
-
-private:
   std::vector<std::unique_ptr<ExprAST>> args;
 };
 
@@ -218,13 +203,13 @@ private:
 using ExprASTList = std::vector<std::unique_ptr<ExprAST>>;
 
 /// Expression class for numeric literals like "1.0".
-class NumberExprAST : public UniformExprAST {
+class NumberExprAST : public ExprAST {
   double val;
   Type type;
 
 public:
   NumberExprAST(Location loc, Type type, double val)
-      : UniformExprAST(ExprKind::Expr_Num, std::move(loc), {}), type(type), val(val) {}
+      : ExprAST(ExprKind::Expr_Num, std::move(loc), {}), type(type), val(val) {}
 
   double getValue() { return val; }
 
@@ -236,14 +221,14 @@ public:
 };
 
 /// Expression class for a literal value.
-class LiteralExprAST : public UniformExprAST {
+class LiteralExprAST : public ExprAST {
   std::vector<std::unique_ptr<ExprAST>> values;
   std::vector<int64_t> dims;
 
 public:
   LiteralExprAST(Location loc, std::vector<std::unique_ptr<ExprAST>> values,
                  std::vector<int64_t> dims)
-      : UniformExprAST(ExprKind::Expr_Literal, std::move(loc), {}),
+      : ExprAST(ExprKind::Expr_Literal, std::move(loc), {}),
         values(std::move(values)),
         dims(std::move(dims)) {}
 
@@ -255,12 +240,12 @@ public:
 };
 
 /// Expression class for referencing a variable, like "a".
-class VariableExprAST : public UniformExprAST {
+class VariableExprAST : public ExprAST {
   std::string name;
 
 public:
   VariableExprAST(Location loc, llvm::StringRef name)
-      : UniformExprAST(ExprKind::Expr_Var, std::move(loc), {}), name(name) {}
+      : ExprAST(ExprKind::Expr_Var, std::move(loc), {}), name(name) {}
 
   llvm::StringRef getName() { return name; }
 
@@ -269,7 +254,7 @@ public:
 };
 
 /// Expression class for defining a variable.
-class VarDeclExprAST : public UniformExprAST {
+class VarDeclExprAST : public ExprAST {
   std::string name;
   VarType type;
   std::unique_ptr<ExprAST> initVal;
@@ -277,7 +262,7 @@ class VarDeclExprAST : public UniformExprAST {
 public:
   VarDeclExprAST(Location loc, llvm::StringRef name, VarType type,
                  std::unique_ptr<ExprAST> initVal)
-      : UniformExprAST(ExprKind::Expr_VarDecl, std::move(loc), {}), name(name),
+      : ExprAST(ExprKind::Expr_VarDecl, std::move(loc), {}), name(name),
         type(std::move(type)), initVal(std::move(initVal)) {}
 
   llvm::StringRef getName() { return name; }
@@ -289,7 +274,7 @@ public:
 };
 
 /// Expression class for defining an assignment
-class AssignExprAST : public UniformExprAST {
+class AssignExprAST : public ExprAST {
   char op;
   std::unique_ptr<ExprAST> src;
   std::unique_ptr<ExprAST> dst;
@@ -298,7 +283,7 @@ public:
   char getOp() { return op; }
   AssignExprAST(Location loc, char op, 
                 std::unique_ptr<ExprAST> dst, std::unique_ptr<ExprAST> src)
-      : UniformExprAST(ExprKind::Expr_AssignOp, std::move(loc), {}), op(op),
+      : ExprAST(ExprKind::Expr_AssignOp, std::move(loc), {}), op(op),
         dst(std::move(dst)), src(std::move(src)) {}
 
   ExprAST *getDst() { return dst.get(); }
@@ -309,12 +294,12 @@ public:
 };
 
 /// Expression class for a return operator.
-class ReturnExprAST : public UniformExprAST {
+class ReturnExprAST : public ExprAST {
   std::optional<std::unique_ptr<ExprAST>> expr;
 
 public:
   ReturnExprAST(Location loc, std::optional<std::unique_ptr<ExprAST>> expr)
-      : UniformExprAST(ExprKind::Expr_Return, std::move(loc), {}), expr(std::move(expr)) {}
+      : ExprAST(ExprKind::Expr_Return, std::move(loc), {}), expr(std::move(expr)) {}
 
   std::optional<ExprAST *> getExpr() {
     if (expr.has_value())
@@ -327,7 +312,7 @@ public:
 };
 
 /// Expression class for a binary operator.
-class BinaryExprAST : public UniformExprAST {
+class BinaryExprAST : public ExprAST {
   char op;
   std::unique_ptr<ExprAST> lhs, rhs;
 
@@ -338,7 +323,7 @@ public:
 
   BinaryExprAST(Location loc, char op, std::unique_ptr<ExprAST> lhs,
                 std::unique_ptr<ExprAST> rhs)
-      : UniformExprAST(ExprKind::Expr_BinOp, std::move(loc), {}), op(op), lhs(std::move(lhs)),
+      : ExprAST(ExprKind::Expr_BinOp, std::move(loc), {}), op(op), lhs(std::move(lhs)),
         rhs(std::move(rhs)) {}
 
   /// LLVM style RTTI
@@ -346,14 +331,14 @@ public:
 };
 
 /// Expression class for function call.
-class CallExprAST : public UniformExprAST {
+class CallExprAST : public ExprAST {
   std::string callee;
 
 public:
   CallExprAST(Location loc,
               const std::string& callee,
               std::vector<std::unique_ptr<ExprAST>> args)
-      : UniformExprAST(ExprKind::Expr_Call, std::move(loc),
+      : ExprAST(ExprKind::Expr_Call, std::move(loc),
         std::move(args)),
         callee(callee) {}
 
@@ -364,7 +349,7 @@ public:
 };
 
 /// Expression class for builtin print call.
-class PrintExprAST : public UniformExprAST {
+class PrintExprAST : public ExprAST {
  public:
   ExprAST* getArg() { return getArgs().front().get(); }
 
@@ -373,34 +358,34 @@ class PrintExprAST : public UniformExprAST {
 };
 
 /// Expression class for builtin add call.
-class AddExprAST : public UniformExprAST {
+class AddExprAST : public ExprAST {
  public:
   /// LLVM style RTTI
   static bool classof(const ExprAST *c) { return c->getKind() == ExprKind::Expr_Add; }
 };
 
-class MulExprAST : public UniformExprAST {
+class MulExprAST : public ExprAST {
  public:
   /// LLVM style RTTI
   static bool classof(const ExprAST *c) { return c->getKind() == ExprKind::Expr_Mul; }
 };
 
 /// Expression class for builtin max call.
-class MaxExprAST : public UniformExprAST {
+class MaxExprAST : public ExprAST {
  public:
   /// LLVM style RTTI
   static bool classof(const ExprAST *c) { return c->getKind() == ExprKind::Expr_Max; }
 };
 
 /// Expression class for builtin dot call.
-class DotExprAST : public UniformExprAST {
+class DotExprAST : public ExprAST {
  public:
   /// LLVM style RTTI
   static bool classof(const ExprAST *c) { return c->getKind() == ExprKind::Expr_Dot; }
 };
 
 /// Expression class for builtin random call.
-class RandomExprAST : public UniformExprAST {
+class RandomExprAST : public ExprAST {
  public:
   /// LLVM style RTTI
   static bool classof(const ExprAST *c) { return c->getKind() == ExprKind::Expr_Random; }
