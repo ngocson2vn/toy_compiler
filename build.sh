@@ -50,10 +50,11 @@ echo "==================================================="
 echo "3. Build toy compiler"
 echo "==================================================="
 
-if [ ! -d ${CUDA_ROOT} ]; then
-  echo "CUDA_ROOT does not exist!"
-  echo "Please export a correct CUDA_ROOT. For example,"
+if [ ! -d "${CUDA_ROOT}" ]; then
+  echo "CUDA_ROOT does not exist! Please export a correct CUDA_ROOT."
+  echo "For example,"
   echo "export CUDA_ROOT=/usr/local/cuda-12.4"
+  exit 1
 fi
 
 mkdir -p ${ROOT_DIR}/build
