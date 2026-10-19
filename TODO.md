@@ -2,6 +2,7 @@
 - Optimize `toy::DotOp`
 - Merge `scf::ParallelOp` ops
 - `toy::DotOp` and epilogue fusion
+- Build a simple neural network
 
 <br/>
 
